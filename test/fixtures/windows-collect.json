@@ -1,0 +1,126 @@
+{
+  "processes": [
+    {
+      "pid": 4,
+      "ppid": 0,
+      "name": "System",
+      "exe": null,
+      "cmd": null,
+      "start": "2026-08-12T06:11:02.0000000Z"
+    },
+    {
+      "pid": 6104,
+      "ppid": 4,
+      "name": "explorer.exe",
+      "exe": "C:\\Windows\\explorer.exe",
+      "cmd": "C:\\Windows\\Explorer.EXE",
+      "start": "2026-08-12T06:12:44.1200000Z"
+    },
+    {
+      "pid": 9120,
+      "ppid": 6104,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"node\"  \"C:\\Users\\dev\\projects\\shop-web\\node_modules\\vite\\bin\\vite.js\" dev --port 4310",
+      "start": "2026-08-14T09:02:11.4500000Z"
+    },
+    {
+      "pid": 9412,
+      "ppid": 40001,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"node\"  \"C:\\Users\\dev\\projects\\api-gateway\\node_modules\\.bin\\\\..\\vite\\bin\\vite.js\" dev --port 4311",
+      "start": "2026-08-13T18:40:00.0000000Z"
+    },
+    {
+      "pid": 9600,
+      "ppid": 6104,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"C:\\Program Files\\nodejs\\\\node.exe\"  \"C:\\Users\\dev\\projects\\shop-web\\node_modules\\vitest\\vitest.mjs\" run",
+      "start": "2026-08-14T10:15:00.0000000Z"
+    },
+    {
+      "pid": 9700,
+      "ppid": 9600,
+      "name": "cmd.exe",
+      "exe": "C:\\Windows\\system32\\cmd.exe",
+      "cmd": "C:\\Windows\\system32\\cmd.exe /d /s /c \"npx ^\"chrome-devtools-mcp@1.7.0^\" ^\"--browser-url^\" ^\"http://127.0.0.1:9222^\"\"",
+      "start": "2026-08-14T10:20:00.0000000Z"
+    },
+    {
+      "pid": 9701,
+      "ppid": 9700,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"C:\\Program Files\\nodejs\\\\node.exe\" \"C:\\Users\\dev\\AppData\\Roaming\\npm-cache\\_npx\\a1b2\\node_modules\\chrome-devtools-mcp\\build\\src\\index.js\"",
+      "start": "2026-08-14T10:20:01.0000000Z"
+    },
+    {
+      "pid": 9800,
+      "ppid": 6104,
+      "name": "chrome.exe",
+      "exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmd": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" --user-data-dir=C:\\Users\\dev\\AppData\\Local\\Temp\\chrome-devtools-mcp\\chrome-profile --remote-debugging-port=9222",
+      "start": "2026-08-14T10:20:02.0000000Z"
+    },
+    {
+      "pid": 9801,
+      "ppid": 9800,
+      "name": "chrome.exe",
+      "exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmd": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" --type=renderer --user-data-dir=C:\\Users\\dev\\AppData\\Local\\Temp\\chrome-devtools-mcp\\chrome-profile",
+      "start": "2026-08-14T10:20:03.0000000Z"
+    },
+    {
+      "pid": 9802,
+      "ppid": 6104,
+      "name": "chrome.exe",
+      "exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmd": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" --type=renderer --field-trial-handle=1234",
+      "start": "2026-08-12T07:00:00.0000000Z"
+    },
+    {
+      "pid": 10240,
+      "ppid": 6104,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"C:\\Program Files\\nodejs\\\\node.exe\" \"C:\\Users\\dev\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js\"",
+      "start": "2026-08-14T08:00:00.0000000Z"
+    },
+    {
+      "pid": 11500,
+      "ppid": 4,
+      "name": "postgres.exe",
+      "exe": null,
+      "cmd": null,
+      "start": "2026-08-12T06:13:00.0000000Z"
+    },
+    {
+      "pid": 12040,
+      "ppid": 6104,
+      "name": "node.exe",
+      "exe": "C:\\Program Files\\nodejs\\node.exe",
+      "cmd": "\"C:\\Program Files\\nodejs\\\\node.exe\"  \"C:\\Program Files\\nodejs\\\\node_modules\\npm\\bin\\npm-cli.js\" run dev",
+      "start": "2026-08-14T11:00:00.0000000Z"
+    },
+    {
+      "pid": 40001,
+      "ppid": 6104,
+      "name": "Notepad.exe",
+      "exe": "C:\\Windows\\system32\\notepad.exe",
+      "cmd": "\"C:\\Windows\\system32\\notepad.exe\"",
+      "start": "2026-08-15T12:00:00.0000000Z"
+    }
+  ],
+  "ports": [
+    { "addr": "::", "port": 4310, "state": "Listen", "pid": 9120, "proto": "tcp" },
+    { "addr": "127.0.0.1", "port": 4310, "state": "Listen", "pid": 9120, "proto": "tcp" },
+    { "addr": "::", "port": 4311, "state": "Listen", "pid": 9412, "proto": "tcp" },
+    { "addr": "127.0.0.1", "port": 9222, "state": "Listen", "pid": 9800, "proto": "tcp" },
+    { "addr": "0.0.0.0", "port": 5432, "state": "Listen", "pid": 11500, "proto": "tcp" },
+    { "addr": "127.0.0.1", "port": 54120, "state": "Established", "pid": 9600, "proto": "tcp" },
+    { "addr": "0.0.0.0", "port": 5353, "state": "Bound", "pid": 0, "proto": "udp" }
+  ],
+  "warnings": []
+}

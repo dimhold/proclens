@@ -1,0 +1,6 @@
+tcp   LISTEN 0      511            0.0.0.0:4310       0.0.0.0:*     users:(("node",pid=9120,fd=21))
+tcp   LISTEN 0      511               [::]:4311          [::]:*     users:(("node",pid=9412,fd=23))
+tcp   LISTEN 0      4096         127.0.0.1:5432        0.0.0.0:*    users:(("postgres",pid=1150,fd=6),("postgres",pid=1151,fd=6))
+udp   UNCONN 0      0              0.0.0.0:5353       0.0.0.0:*     users:(("avahi-daemon",pid=812,fd=12))
+tcp   LISTEN 0      128            0.0.0.0:22         0.0.0.0:*
+tcp   ESTAB  0      0         192.168.1.10:54120  93.184.216.34:443 users:(("node",pid=9600,fd=30))
