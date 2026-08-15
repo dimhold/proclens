@@ -1,0 +1,12 @@
+p9120
+fcwd
+n/Users/dev/projects/shop-web
+p9412
+fcwd
+n/Users/dev/projects/api-gateway
+p9601
+fcwd
+n/Users/dev/projects/shop-web
+p1150
+fcwd
+n/opt/homebrew/var/postgresql@16
