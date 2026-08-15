@@ -1,0 +1,6 @@
+    1     0 root     Wed Aug 12 08:11:02 2026 /sbin/launchd
+ 9120  6104 dev      Thu Aug 14 09:02:11 2026 node /Users/dev/projects/shop-web/node_modules/vite/bin/vite.js dev --port 4310
+ 9412     1 dev      Wed Aug 13 18:40:00 2026 node /Users/dev/projects/api-gateway/node_modules/.bin/vite dev --port 4311
+ 9601  6104 dev      Thu Aug 14 10:15:00 2026 node /Users/dev/projects/shop-web/node_modules/vitest/vitest.mjs run
+ 9801  6104 dev      Thu Aug 14 10:20:02 2026 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/var/folders/t9/chrome-devtools-mcp/chrome-profile --remote-debugging-port=9222
+ 1150   500 _postgres Wed Aug 12 06:13:00 2026 /opt/homebrew/opt/postgresql@16/bin/postgres -D /opt/homebrew/var/postgresql@16

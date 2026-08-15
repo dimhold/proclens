@@ -1,0 +1,159 @@
+/**
+ * Parsers for the Windows collector.
+ *
+ * The collector runs one PowerShell script that emits a single JSON document
+ * (see `collectors/windows.ts`). Parsing lives here, apart from the process
+ * spawn, so the tests can feed it captured output instead of a live machine.
+ */
+
+import { unwrapShell } from '../../cmdline.js';
+import { exact, inferred, unavailable } from '../../types.js';
+import type { CollectResult, Field, PortBinding, Protocol, RawProcess } from '../../types.js';
+
+export interface WindowsProcessRow {
+  pid: number;
+  ppid: number | null;
+  name: string | null;
+  exe: string | null;
+  cmd: string | null;
+  /** ISO 8601, from Win32_Process.CreationDate. */
+  start: string | null;
+}
+
+export interface WindowsPortRow {
+  addr: string | null;
+  port: number;
+  state: string | null;
+  pid: number | null;
+  proto: string | null;
+}
+
+export interface WindowsPayload {
+  processes?: WindowsProcessRow[] | null;
+  ports?: WindowsPortRow[] | null;
+  warnings?: string[] | null;
+}
+
+const CMDLINE_DENIED =
+  'Win32_Process withheld the command line for this process. It belongs to another user or runs elevated; try an elevated shell.';
+
+/**
+ * Windows does not expose another process's working directory through WMI at
+ * all. Reading it would mean walking the PEB with ReadProcessMemory, which
+ * needs matching bitness and debug rights and breaks on protected processes.
+ * proclens does not pretend: it infers a directory from the command line when
+ * the command line contains an absolute path, and labels it as inferred.
+ */
+export const WINDOWS_CWD_NOTE =
+  'Windows does not expose the working directory of another process; this is inferred from the command line';
+
+const WINDOWS_ABS_PATH = /(?:^|[\s"'=])([a-z]:[\\/](?:[^\\/:*?"<>|\r\n]+[\\/])*[^\\/:*?"<>|\r\n]*)/gi;
+
+/**
+ * Best effort working directory for Windows: the deepest directory that
+ * appears as an absolute path in the command line, ignoring the runtime under
+ * Program Files and anything inside node_modules, which is a package location
+ * rather than a project.
+ */
+export function inferWindowsCwd(commandLine: string | null): Field<string> {
+  if (!commandLine) return unavailable<string>(WINDOWS_CWD_NOTE);
+
+  // Anything spawned through cmd.exe hides its real command behind caret
+  // escapes, and a path read out of those would come back mangled.
+  const wrapper = unwrapShell(commandLine);
+  const source = wrapper ? wrapper.inner : commandLine;
+
+  const candidates: string[] = [];
+  for (const match of source.matchAll(WINDOWS_ABS_PATH)) {
+    const raw = match[1];
+    if (!raw) continue;
+    const cleaned = raw.replace(/[",]+$/, '');
+    const dir = /[\\/]$/.test(cleaned) ? cleaned : cleaned.slice(0, Math.max(cleaned.lastIndexOf('\\'), cleaned.lastIndexOf('/')));
+    if (dir.length <= 3) continue;
+    const lower = dir.toLowerCase();
+    if (lower.includes('\\node_modules')) {
+      const cut = lower.indexOf('\\node_modules');
+      candidates.push(dir.slice(0, cut));
+      continue;
+    }
+    if (lower.startsWith('c:\\windows')) continue;
+    if (lower.startsWith('c:\\program files')) continue;
+    candidates.push(dir.replace(/[\\/]+$/, ''));
+  }
+
+  if (candidates.length === 0) return unavailable<string>(WINDOWS_CWD_NOTE);
+  // The longest path is the most specific thing the command line mentions.
+  const best = candidates.reduce((a, b) => (b.length > a.length ? b : a));
+  return inferred(best, WINDOWS_CWD_NOTE);
+}
+
+function parseDate(value: string | null): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function parseWindowsProcesses(rows: readonly WindowsProcessRow[]): RawProcess[] {
+  const out: RawProcess[] = [];
+  for (const row of rows) {
+    if (typeof row?.pid !== 'number' || !Number.isFinite(row.pid)) continue;
+    const cmd = row.cmd && row.cmd.trim() !== '' ? row.cmd : null;
+    out.push({
+      pid: row.pid,
+      ppid: typeof row.ppid === 'number' && row.ppid > 0 ? row.ppid : null,
+      name: row.name ?? String(row.pid),
+      exePath: row.exe ?? null,
+      commandLine: cmd ? exact(cmd) : unavailable(CMDLINE_DENIED),
+      cwd: inferWindowsCwd(cmd),
+      startedAt: parseDate(row.start),
+      user: null,
+    });
+  }
+  return out;
+}
+
+/** Get-NetTCPConnection reports states as words; normalise to lower case. */
+export function normalizeWindowsState(state: string | null): string {
+  if (!state) return 'unknown';
+  const lower = state.toLowerCase();
+  if (lower === 'listen' || lower === 'listening') return 'listen';
+  if (lower === 'bound') return 'bound';
+  return lower;
+}
+
+export function parseWindowsPorts(rows: readonly WindowsPortRow[]): PortBinding[] {
+  const out: PortBinding[] = [];
+  for (const row of rows) {
+    if (typeof row?.port !== 'number' || !Number.isFinite(row.port)) continue;
+    const proto: Protocol = row.proto === 'udp' ? 'udp' : 'tcp';
+    out.push({
+      protocol: proto,
+      address: row.addr ?? '::',
+      port: row.port,
+      state: proto === 'udp' ? 'listen' : normalizeWindowsState(row.state),
+      pid: typeof row.pid === 'number' && row.pid > 0 ? row.pid : null,
+    });
+  }
+  return out;
+}
+
+/** Parse the whole JSON document the PowerShell helper prints. */
+export function parseWindowsPayload(json: string): CollectResult {
+  let payload: WindowsPayload;
+  try {
+    payload = JSON.parse(json) as WindowsPayload;
+  } catch (error) {
+    throw new Error(`could not parse the PowerShell output as JSON: ${(error as Error).message}`);
+  }
+  const processes = parseWindowsProcesses(payload.processes ?? []);
+  const ports = parseWindowsPorts(payload.ports ?? []);
+  const warnings = [...(payload.warnings ?? [])];
+
+  const denied = processes.filter((p) => p.commandLine.source === 'unavailable').length;
+  if (denied > 0) {
+    warnings.push(
+      `${denied} of ${processes.length} processes did not disclose a command line. Those belong to another user or run elevated; an elevated shell sees more.`,
+    );
+  }
+  return { processes, ports, warnings };
+}
