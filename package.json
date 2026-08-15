@@ -1,0 +1,55 @@
+{
+  "name": "proclens",
+  "version": "0.1.0",
+  "description": "Identify look-alike node/python/agent processes: full command line, working directory, and the ports they hold.",
+  "keywords": [
+    "process",
+    "processes",
+    "ps",
+    "ports",
+    "port",
+    "lsof",
+    "netstat",
+    "devtools",
+    "cli",
+    "mcp",
+    "dev-server",
+    "cross-platform"
+  ],
+  "license": "MIT",
+  "author": "Dmitry Semenkevich <dimhold@gmail.com>",
+  "type": "module",
+  "bin": {
+    "proclens": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
