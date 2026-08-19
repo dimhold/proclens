@@ -7,8 +7,20 @@ import { exact, unavailable } from '../src/types.js';
 import type { ProcessView } from '../src/types.js';
 
 describe('parseCliArgs', () => {
-  it('defaults to listing', () => {
-    expect(parseCliArgs([]).command).toBe('ls');
+  /**
+   * The bare name opens the interactive screen, changed 2026-08-19. The rule is
+   * deliberately "no arguments at all" rather than "no positionals", so that
+   * anything scripted still gets the one-shot listing and never blocks waiting
+   * on a terminal that is not attached.
+   */
+  it('opens the interactive screen when given nothing at all', () => {
+    expect(parseCliArgs([]).command).toBe('top');
+  });
+
+  it('still gives the plain listing to anything with arguments', () => {
+    expect(parseCliArgs(['ls']).command).toBe('ls');
+    expect(parseCliArgs(['--all']).command).toBe('ls');
+    expect(parseCliArgs(['vite']).command).toBe('ls');
   });
 
   it('reads a bare query as a filter', () => {
