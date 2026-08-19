@@ -101,6 +101,31 @@ describe('inferWindowsCwd', () => {
   it('returns unavailable when there is no command line at all', () => {
     expect(inferWindowsCwd(null).source).toBe('unavailable');
   });
+
+  /**
+   * An unavailable row must not claim an inference it did not make. One string
+   * used to serve both outcomes, so 164 of 433 processes on a real run printed
+   * "this is inferred from the command line" beside no directory at all. The
+   * older assertion above matched only the shared opening clause, which is
+   * true of the misleading wording too, so it never caught this. These check
+   * the half that differs.
+   */
+  it('never says a directory was inferred on a row that shows none', () => {
+    for (const cmdline of [null, 'node', '"C:\\Program Files\\nodejs\\node.exe"']) {
+      const field = inferWindowsCwd(cmdline);
+      expect(field.source).toBe('unavailable');
+      expect(field.value).toBeNull();
+      expect(field.note).not.toMatch(/this is inferred/);
+      expect(field.note).toMatch(/nothing to infer from|no absolute path to infer one from/);
+    }
+  });
+
+  it('does say the directory was inferred when it produced one', () => {
+    const field = inferWindowsCwd('node D:\\work\\api\\server.js');
+    expect(field.source).toBe('inferred');
+    expect(field.value).toBe('D:\\work\\api');
+    expect(field.note).toMatch(/this is inferred from the command line/);
+  });
 });
 
 describe('parseWindowsProcesses', () => {
