@@ -210,3 +210,44 @@ export function bindSocketsToPids(
     pid: inodeToPid.get(socket.inode) ?? null,
   }));
 }
+
+/**
+ * Service and container names for a pid, read from /proc/<pid>/cgroup.
+ *
+ * This is the Linux answer to the same question Win32_Service answers on
+ * Windows: what does the system itself call this process. It needs no
+ * privileges, it is one small file read, and it works on processes whose
+ * command line says nothing useful. Verified on a live server: a process whose
+ * comm is plainly `node` reports `0::/system.slice/cron.service`, which names
+ * the thing that launched it.
+ *
+ * Two cgroup layouts appear in the wild and both are handled:
+ *   v2   `0::/system.slice/cron.service`
+ *   v1   `12:pids:/system.slice/nginx.service`
+ *
+ * What is deliberately NOT reported as a service:
+ *   - `user.slice` session scopes such as `session-10205.scope`. That is a
+ *     login shell, not a service, and calling it one would be a wrong name
+ *     stated confidently, which is the failure this tool exists to avoid.
+ *   - bare `.slice` entries, which are groupings rather than units.
+ */
+export function parseProcCgroup(content: string): string[] {
+  const found = new Set<string>();
+  for (const line of content.split('\n')) {
+    const path = line.trim().split(':').slice(2).join(':');
+    if (!path) continue;
+    for (const segment of path.split('/')) {
+      if (segment === '') continue;
+      const docker = /^(?:docker[-/])([0-9a-f]{12,64})(?:\.scope)?$/.exec(segment);
+      const containerId = docker?.[1];
+      if (containerId) {
+        found.add(`docker:${containerId.slice(0, 12)}`);
+        continue;
+      }
+      if (segment.endsWith('.service')) {
+        found.add(segment.slice(0, -'.service'.length));
+      }
+    }
+  }
+  return [...found].sort();
+}
