@@ -19,7 +19,10 @@ import { createPalette } from '../dist/color.js';
 import { exact, inferred, unavailable } from '../dist/types.js';
 
 const COLS = 104;
-const ROWS = 26;
+// Tall enough for the header, the processes below, the fixed pane and the
+// footer, and no taller. A real terminal leaves blank rows under a short list;
+// a picture that reproduced them would spend half its height on nothing.
+const ROWS = 18;
 const CELL_W = 8.42;
 const CELL_H = 19;
 const PAD_X = 26;
@@ -227,4 +230,14 @@ lines.forEach((line, row) => {
 });
 
 parts.push('</svg>');
-process.stdout.write(parts.join('\n') + '\n');
+
+/**
+ * `--json` emits the same frame as coloured runs, so a raster renderer can
+ * draw exactly what the SVG draws. One frame, two outputs, and no chance of a
+ * PNG in a post disagreeing with the SVG in the README.
+ */
+if (process.argv.includes('--json')) {
+  process.stdout.write(JSON.stringify({ cols: COLS, lines: lines.map(runs) }) + '\n');
+} else {
+  process.stdout.write(parts.join('\n') + '\n');
+}
