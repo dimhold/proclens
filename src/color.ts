@@ -11,6 +11,9 @@ const CODES = {
   dim: `${ESC}[2m`,
   italic: `${ESC}[3m`,
   underline: `${ESC}[4m`,
+  // Reverse video. The interactive screen marks the selected row with it
+  // rather than a colour, so the cursor stays visible on any theme.
+  inverse: `${ESC}[7m`,
   red: `${ESC}[31m`,
   green: `${ESC}[32m`,
   yellow: `${ESC}[33m`,
