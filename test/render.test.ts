@@ -162,7 +162,7 @@ describe('renderHeader', () => {
       warnings: [],
     } satisfies Snapshot;
     const header = stripAnsi(renderHeader(snapshot, 1, palette));
-    expect(header).toContain('proclens');
+    expect(header).toContain('whotop');
     expect(header).toContain('win32');
     expect(header).toContain('1');
     expect(header).toContain('of 2 processes');
@@ -178,7 +178,7 @@ describe('renderWarnings', () => {
 });
 
 describe('renderCapabilities', () => {
-  it('grades what the platform will tell proclens and lists the caveats', () => {
+  it('grades what the platform will tell whotop and lists the caveats', () => {
     const snapshot = {
       platform: 'win32',
       capturedAt: new Date(),

@@ -1,7 +1,7 @@
 /**
  * Programmatic entry point.
  *
- * `inspect()` gives the same snapshot the CLI renders, so proclens can be a
+ * `inspect()` gives the same snapshot the CLI renders, so whotop can be a
  * library inside a script that decides what to do about the processes it finds.
  */
 

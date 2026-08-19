@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * proclens command line.
+ * whotop command line.
  */
 
 import { readFileSync, realpathSync } from 'node:fs';
@@ -34,13 +34,13 @@ function version(): string {
   }
 }
 
-const HELP = `proclens - what is this process, and which port is it holding
+const HELP = `whotop - what is this process, and which port is it holding
 
 Usage
-  proclens [query] [options]        list development processes
-  proclens port <number>            show what holds a port
-  proclens kill --port <number>     kill the holder of a port, after confirming
-  proclens kill --pid <number>      kill a process by pid
+  whotop [query] [options]        list development processes
+  whotop port <number>            show what holds a port
+  whotop kill --port <number>     kill the holder of a port, after confirming
+  whotop kill --pid <number>      kill a process by pid
 
 Selection
   -a, --all             every process, not just the developer relevant ones
@@ -125,7 +125,7 @@ function toSignal(name: string | undefined): KillSignal {
 
 export function parseCliArgs(rawArgv: readonly string[]): Parsed {
   // `--no-color` is handled here because parseArgs only learned about negated
-  // booleans in newer Node versions than proclens supports.
+  // booleans in newer Node versions than whotop supports.
   let colorOverride: boolean | null = null;
   const argv = rawArgv.filter((arg) => {
     if (arg === '--no-color') {
@@ -174,7 +174,7 @@ export function parseCliArgs(rawArgv: readonly string[]): Parsed {
   if (head === 'port') {
     command = 'port';
     const target = rest[0];
-    if (target === undefined) throw new UsageError('`proclens port` needs a port number');
+    if (target === undefined) throw new UsageError('`whotop port` needs a port number');
     const parsed = Number.parseInt(target, 10);
     if (!Number.isFinite(parsed)) throw new UsageError(`"${target}" is not a port number`);
     ports.push(parsed);
@@ -187,7 +187,7 @@ export function parseCliArgs(rawArgv: readonly string[]): Parsed {
       pids.push(parsed);
     }
     if (ports.length === 0 && pids.length === 0) {
-      throw new UsageError('`proclens kill` needs --port <number> or --pid <number>');
+      throw new UsageError('`whotop kill` needs --port <number> or --pid <number>');
     }
   } else if (head === 'ls' || head === 'list') {
     query = rest.join(' ') || null;
@@ -288,7 +288,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   try {
     options = parseCliArgs(argv);
   } catch (error) {
-    process.stderr.write(`proclens: ${(error as Error).message}\n\nRun \`proclens --help\`.\n`);
+    process.stderr.write(`whotop: ${(error as Error).message}\n\nRun \`whotop --help\`.\n`);
     return 2;
   }
 
@@ -309,7 +309,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   try {
     snapshot = await inspect();
   } catch (error) {
-    process.stderr.write(`proclens could not read the process table: ${(error as Error).message}\n`);
+    process.stderr.write(`whotop could not read the process table: ${(error as Error).message}\n`);
     return 3;
   }
 
@@ -457,7 +457,7 @@ if (invokedDirectly()) {
       process.exitCode = code;
     },
     (error: unknown) => {
-      process.stderr.write(`proclens crashed: ${(error as Error).stack ?? String(error)}\n`);
+      process.stderr.write(`whotop crashed: ${(error as Error).stack ?? String(error)}\n`);
       process.exitCode = 3;
     },
   );
