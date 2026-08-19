@@ -17,7 +17,7 @@
     "cross-platform"
   ],
   "license": "MIT",
-  "author": "Dmitry Semenkevich <dimhold@gmail.com>",
+  "author": "Dmitriy Semenkevich <dimhold@gmail.com>",
   "type": "module",
   "bin": {
     "proclens": "dist/cli.js"
