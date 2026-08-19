@@ -32,6 +32,7 @@ const view = (over: Partial<ProcessView> = {}): ProcessView => ({
   cwd: exact('C:\\Users\\dev\\projects\\shop-web'),
   startedAt: new Date('2026-08-14T09:02:11.450Z'),
   user: null,
+  services: [],
   classification: {
     role: 'dev-server',
     confidence: 0.78,

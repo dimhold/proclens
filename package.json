@@ -17,6 +17,14 @@
     "cross-platform"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimhold/whotop.git"
+  },
+  "homepage": "https://github.com/dimhold/whotop#readme",
+  "bugs": {
+    "url": "https://github.com/dimhold/whotop/issues"
+  },
   "author": "Dmitriy Semenkevich <dimhold@gmail.com>",
   "type": "module",
   "bin": {
