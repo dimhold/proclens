@@ -6,8 +6,8 @@
   <circle cx="44" cy="20" r="6" fill="#ffbd2e"/>
   <circle cx="64" cy="20" r="6" fill="#27c93f"/>
   <text x="450" y="25" text-anchor="middle" fill="#8b949e" font-size="13">dev@laptop: ~/projects</text>
-  <text x="26" y="66" fill="#8b949e" font-size="14">$ proclens</text>
-  <text y="96.0"><tspan x="26.0" fill="#f0f6fc" font-weight="700">proclens</tspan><tspan x="116.0" fill="#8b949e">win32</tspan><tspan x="179.0" fill="#e6edf3">10</tspan><tspan x="206.0" fill="#8b949e">of 14 processes</tspan><tspan x="386.0" fill="#8b949e">14:20:00</tspan></text>
+  <text x="26" y="66" fill="#8b949e" font-size="14">$ whotop</text>
+  <text y="96.0"><tspan x="26.0" fill="#f0f6fc" font-weight="700">whotop</tspan><tspan x="116.0" fill="#8b949e">win32</tspan><tspan x="179.0" fill="#e6edf3">10</tspan><tspan x="206.0" fill="#8b949e">of 14 processes</tspan><tspan x="386.0" fill="#8b949e">14:20:00</tspan></text>
   <text y="134.3"><tspan x="26.0" fill="#f0f6fc" font-weight="700">10240</tspan><tspan x="89.0" fill="#d2a8ff">agent-session</tspan><tspan x="269.0" fill="#e6edf3">@anthropic-ai/claude-code</tspan><tspan x="584.0" fill="#8b949e">3h 20m</tspan></text>
   <text y="159.8"><tspan x="35.0" fill="#f0f6fc" font-weight="700">9700</tspan><tspan x="89.0" fill="#39c5cf">mcp-server</tspan><tspan x="269.0" fill="#e6edf3">chrome-devtools-mcp</tspan><tspan x="593.0" fill="#8b949e">1h 0m</tspan></text>
   <text y="185.3"><tspan x="26.0" fill="#f0f6fc" font-weight="700">12040</tspan><tspan x="89.0" fill="#56d364">dev-server</tspan><tspan x="269.0" fill="#e6edf3">npm dev</tspan><tspan x="611.0" fill="#8b949e">20m</tspan></text>

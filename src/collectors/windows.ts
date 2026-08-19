@@ -75,10 +75,10 @@ const CAPABILITIES: CollectorCapabilities = {
   ports: 'full',
   user: 'none',
   notes: [
-    'Command lines come from Win32_Process. Processes owned by another user or running elevated withhold theirs unless proclens itself runs elevated.',
-    WINDOWS_CWD_NOTE + '. Reading the real value would mean walking another process PEB with ReadProcessMemory, which proclens does not do.',
+    'Command lines come from Win32_Process. Processes owned by another user or running elevated withhold theirs unless whotop itself runs elevated.',
+    WINDOWS_CWD_NOTE + '. Reading the real value would mean walking another process PEB with ReadProcessMemory, which whotop does not do.',
     'Ports come from Get-NetTCPConnection and Get-NetUDPEndpoint, both of which report the owning pid.',
-    'Parent pids on Windows are not cleared when the parent dies and pid numbers are reused, so proclens compares start times before calling a process orphaned.',
+    'Parent pids on Windows are not cleared when the parent dies and pid numbers are reused, so whotop compares start times before calling a process orphaned.',
   ],
 };
 

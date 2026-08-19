@@ -1,6 +1,6 @@
 /**
- * Tiny ANSI helper. proclens ships with zero runtime dependencies, so that
- * `npx proclens` is one download and no supply chain to audit.
+ * Tiny ANSI helper. whotop ships with zero runtime dependencies, so that
+ * `npx whotop` is one download and no supply chain to audit.
  */
 
 const ESC = '\u001B';

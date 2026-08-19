@@ -1,6 +1,6 @@
 /**
  * Selecting rows out of a snapshot. Kept separate from rendering so that the
- * same predicates back `proclens`, `proclens port N` and `proclens kill`.
+ * same predicates back `whotop`, `whotop port N` and `whotop kill`.
  */
 
 import { INTERESTING_ROLES } from './classify.js';
@@ -42,7 +42,7 @@ function lowestListeningPort(view: ProcessView): number {
 }
 
 /**
- * Default view: anything proclens could name as a development role, plus
+ * Default view: anything whotop could name as a development role, plus
  * anything holding a port, because an unclassified process on port 4310 is
  * exactly the one you are looking for.
  */

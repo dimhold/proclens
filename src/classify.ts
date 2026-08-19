@@ -1,7 +1,7 @@
 /**
  * Role heuristics.
  *
- * The whole point of proclens is that a process table full of `node` and
+ * The whole point of whotop is that a process table full of `node` and
  * `python` tells you nothing. Everything useful is in the command line, so
  * that is where the rules look. Each rule carries the sentence it would print
  * as evidence, because a classification you cannot check is a guess with
@@ -562,7 +562,7 @@ export const ALL_ROLES: readonly Role[] = [
   'unknown',
 ];
 
-/** Roles proclens shows by default: the ones a developer put there on purpose. */
+/** Roles whotop shows by default: the ones a developer put there on purpose. */
 export const INTERESTING_ROLES: ReadonlySet<Role> = new Set<Role>([
   'agent-session',
   'mcp-server',

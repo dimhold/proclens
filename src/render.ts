@@ -179,7 +179,7 @@ export function renderProcesses(processes: readonly ProcessView[], options: Rend
   return lines;
 }
 
-/** The long form used by `proclens port N` and `proclens kill`. */
+/** The long form used by `whotop port N` and `whotop kill`. */
 export function renderDetail(view: ProcessView, options: RenderOptions): string[] {
   const { palette, width } = options;
   const lines: string[] = [];
@@ -224,7 +224,7 @@ export function renderDetail(view: ProcessView, options: RenderOptions): string[
 export function renderHeader(snapshot: Snapshot, shown: number, palette: Palette): string {
   const total = snapshot.processes.length;
   return [
-    palette('bold', 'proclens'),
+    palette('bold', 'whotop'),
     palette('dim', snapshot.platform),
     `${palette('white', String(shown))}${palette('dim', ` of ${total} processes`)}`,
     palette('dim', snapshot.capturedAt.toTimeString().slice(0, 8)),
@@ -241,7 +241,7 @@ export function renderWarnings(warnings: readonly string[], palette: Palette, wi
 
 export function renderCapabilities(snapshot: Snapshot, palette: Palette, width: number): string[] {
   const caps = snapshot.capabilities;
-  const lines: string[] = [palette('bold', `what ${snapshot.platform} will and will not tell proclens`)];
+  const lines: string[] = [palette('bold', `what ${snapshot.platform} will and will not tell whotop`)];
   const mark = (level: 'full' | 'partial' | 'none'): string =>
     level === 'full' ? palette('green', 'full') : level === 'partial' ? palette('yellow', 'partial') : palette('red', 'none');
   lines.push(`  command line  ${mark(caps.commandLine)}`);
