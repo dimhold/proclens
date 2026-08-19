@@ -55,6 +55,7 @@ describe('detectOrphan', () => {
     cwd: unavailable<string>('n/a'),
     startedAt,
     user: null,
+    services: [],
   });
 
   it('calls a process an orphan when the parent is not in the table', () => {
