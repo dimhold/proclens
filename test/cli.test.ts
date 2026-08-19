@@ -120,6 +120,7 @@ const view = (over: Partial<ProcessView> = {}): ProcessView => ({
   cwd: exact('/projects/shop-web'),
   startedAt: null,
   user: null,
+  services: [],
   classification: { role: 'dev-server', confidence: 0.8, reason: 'vite', matches: [], label: 'vite' },
   ports: [],
   orphan: exact(true),
