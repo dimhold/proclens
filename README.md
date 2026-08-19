@@ -156,4 +156,4 @@ The parsers are tested against captured fixtures of real `ss`, `lsof`, `/proc` a
 
 ## License
 
-MIT. Copyright (c) 2026 Dmitry Semenkevich.
+MIT. Copyright (c) 2026 Dmitriy Semenkevich.
