@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  buildServiceIndex,
   inferWindowsCwd,
   normalizeWindowsState,
   parseWindowsPayload,
@@ -144,5 +145,35 @@ describe('parseWindowsProcesses', () => {
 
   it('throws a readable error when the payload is not JSON', () => {
     expect(() => parseWindowsPayload('not json')).toThrow(/could not parse the PowerShell output/);
+  });
+});
+
+describe('buildServiceIndex', () => {
+  it('keeps every service a single pid hosts', () => {
+    const index = buildServiceIndex([
+      { pid: 1128, name: 'SamSs', label: 'Security Accounts Manager' },
+      { pid: 1128, name: 'EFS', label: 'Encrypting File System' },
+      { pid: 1128, name: 'KeyIso', label: 'CNG Key Isolation' },
+    ]);
+    expect(index.get(1128)).toEqual(['EFS', 'KeyIso', 'SamSs']);
+  });
+
+  it('prefers the service key over the display name', () => {
+    const index = buildServiceIndex([{ pid: 7, name: 'Dnscache', label: 'DNS Client' }]);
+    expect(index.get(7)).toEqual(['Dnscache']);
+  });
+
+  it('falls back to the display name when the key is missing', () => {
+    const index = buildServiceIndex([{ pid: 7, name: null, label: 'DNS Client' }]);
+    expect(index.get(7)).toEqual(['DNS Client']);
+  });
+
+  it('drops rows that name nothing or belong to no running process', () => {
+    const index = buildServiceIndex([
+      { pid: 0, name: 'Stopped', label: 'Stopped' },
+      { pid: -1, name: 'Nonsense', label: null },
+      { pid: 9, name: '   ', label: '  ' },
+    ]);
+    expect(index.size).toBe(0);
   });
 });

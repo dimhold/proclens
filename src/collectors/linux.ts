@@ -3,6 +3,7 @@ import { isMissingBinary, run } from './exec.js';
 import {
   bindSocketsToPids,
   parseBootTimeSeconds,
+  parseProcCgroup,
   parseProcCmdline,
   parseProcNetTable,
   parseProcStat,
@@ -185,6 +186,13 @@ export class LinuxCollector implements Collector {
         user = null;
       }
 
+      let services: string[] = [];
+      try {
+        services = parseProcCgroup(await readFile(`/proc/${pid}/cgroup`, 'utf8'));
+      } catch {
+        services = []; // The process exited, or this kernel exposes no cgroup file.
+      }
+
       processes.push({
         pid,
         ppid: stats.ppid > 0 ? stats.ppid : null,
@@ -194,6 +202,7 @@ export class LinuxCollector implements Collector {
         cwd: await readCwd(pid),
         startedAt: bootSeconds === null ? null : startTimeFromTicks(bootSeconds, stats.startTicks),
         user,
+        services,
       });
     }
 
