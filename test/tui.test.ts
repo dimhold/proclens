@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anchorSelection,
+  clampVisible,
   columnText,
   nextColumnMode,
   PANE_HEIGHT,
@@ -212,5 +213,38 @@ describe('PANE_HEIGHT', () => {
   it('is a constant, because a pane that resizes with its contents moves the list under the cursor', () => {
     expect(PANE_HEIGHT).toBeGreaterThan(2);
     expect(Number.isInteger(PANE_HEIGHT)).toBe(true);
+  });
+});
+
+describe('clampVisible', () => {
+  /**
+   * The one place every line is trimmed. Rows were clamped by their builder
+   * but the pane, header and footer were not, so a long command line produced
+   * a pane line wider than the terminal, the terminal wrapped it, and the
+   * frame grew taller than the screen. Everything above scrolled away, which
+   * read as the cursor starting mid screen and the pane jumping.
+   */
+  it('cuts a plain line to the width it was given', () => {
+    expect(clampVisible('x'.repeat(200), 40)).toHaveLength(40);
+    expect(clampVisible('short', 40)).toBe('short');
+  });
+
+  it('counts what is visible, not the bytes of the escape sequences', () => {
+    const coloured = '\x1b[31m' + 'x'.repeat(50) + '\x1b[0m';
+    const cut = clampVisible(coloured, 10);
+    expect(cut.replace(/\x1b\[[0-9;]*m/g, '')).toHaveLength(10);
+  });
+
+  it('closes the colour it opened, so nothing bleeds into the next line', () => {
+    expect(clampVisible('\x1b[7m' + 'x'.repeat(50), 5).endsWith('\x1b[0m')).toBe(true);
+  });
+
+  it('never severs an escape sequence and leaks its bytes onto the screen', () => {
+    const cut = clampVisible('\x1b[31mabc\x1b[0mdef', 4);
+    expect(cut).not.toMatch(/\x1b\[[0-9;]*$/);
+  });
+
+  it('returns nothing for a width of zero rather than throwing', () => {
+    expect(clampVisible('anything', 0)).toBe('');
   });
 });

@@ -94,6 +94,18 @@ export const WINDOWS_CWD_NO_CMDLINE =
 export const WINDOWS_CWD_NO_PATH =
   'Windows does not expose the working directory of another process, and its command line carries no absolute path to infer one from';
 
+export const WINDOWS_CWD_ONLY_EXE =
+  'Windows does not expose the working directory of another process, and the only absolute path in its command line is the executable itself, which says nothing about where it runs';
+
+/** Directory of the first token, which is the program being run. */
+function executableDirectory(source: string): string | null {
+  const quoted = /^\s*"([^"]+)"/.exec(source);
+  const first = quoted?.[1] ?? source.trim().split(/\s+/)[0];
+  if (!first || !/^[a-z]:[\\/]/i.test(first)) return null;
+  const cut = Math.max(first.lastIndexOf('\\'), first.lastIndexOf('/'));
+  return cut > 2 ? first.slice(0, cut).replace(/[\\/]+$/, '').toLowerCase() : null;
+}
+
 const WINDOWS_ABS_PATH = /(?:^|[\s"'=])([a-z]:[\\/](?:[^\\/:*?"<>|\r\n]+[\\/])*[^\\/:*?"<>|\r\n]*)/gi;
 
 /**
@@ -128,9 +140,28 @@ export function inferWindowsCwd(commandLine: string | null): Field<string> {
     candidates.push(dir.replace(/[\\/]+$/, ''));
   }
 
-  if (candidates.length === 0) return unavailable<string>(WINDOWS_CWD_NO_PATH);
+  /**
+   * The directory a program lives in is not the directory it runs in.
+   *
+   * `C:\Users\me\.local\bin\claude.exe --resume` mentions exactly one absolute
+   * path, its own, and reporting that as an inferred working directory made
+   * five agent sessions look as though they were all working inside their
+   * install folder. Nothing was false in the strict sense, the field was
+   * marked inferred, and it was still useless and misleading.
+   *
+   * There is no honest substitute on Windows: the real value needs the PEB,
+   * and the children of these sessions were checked and carry only tool
+   * invocations, never the project. Saying nothing beats filling the column
+   * with the install path.
+   */
+  const exeDir = executableDirectory(source);
+  const useful = exeDir === null ? candidates : candidates.filter((dir) => dir.toLowerCase() !== exeDir);
+
+  if (useful.length === 0) {
+    return unavailable<string>(candidates.length === 0 ? WINDOWS_CWD_NO_PATH : WINDOWS_CWD_ONLY_EXE);
+  }
   // The longest path is the most specific thing the command line mentions.
-  const best = candidates.reduce((a, b) => (b.length > a.length ? b : a));
+  const best = useful.reduce((a, b) => (b.length > a.length ? b : a));
   return inferred(best, WINDOWS_CWD_NOTE);
 }
 

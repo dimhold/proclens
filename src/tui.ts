@@ -210,6 +210,45 @@ export function renderRow(
   return selected ? palette('inverse', padEndVisible(line, width)) : line;
 }
 
+/**
+ * Cut a line to a visible width without breaking the escape sequences in it.
+ *
+ * Every line the screen writes goes through here, at the single place they are
+ * all written, rather than being trimmed by whoever built them. Two bugs came
+ * from trusting the builders: the rows were clamped but the pane, the header
+ * and the footer were not, so a process with a long command line produced a
+ * pane line wider than the terminal, the terminal wrapped it, and eight pane
+ * lines became ten. Everything above scrolled off the top, which read as the
+ * cursor starting somewhere in the middle and the pane jumping about.
+ *
+ * A naive slice cannot do this. Escape sequences take no visible width, so
+ * cutting by string index either truncates far too early on a coloured line or
+ * severs a sequence and leaks its bytes onto the screen.
+ */
+export function clampVisible(line: string, width: number): string {
+  if (width <= 0) return '';
+  let visible = 0;
+  let coloured = false;
+  let out = '';
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '\x1b') {
+      const match = /^\x1b\[[0-9;?]*[A-Za-z]/.exec(line.slice(i));
+      if (match) {
+        out += match[0];
+        coloured = true;
+        i += match[0].length;
+        continue;
+      }
+    }
+    if (visible >= width) break;
+    out += line[i];
+    visible += 1;
+    i += 1;
+  }
+  return coloured ? `${out}\x1b[0m` : out;
+}
+
 /** Keep the tail. `…\projects\shop-web` reads better than `C:\Users\dev\pro…`. */
 function truncateStart(text: string, width: number): string {
   if (visibleLength(text) <= width) return text;
@@ -354,7 +393,13 @@ export async function runTui(deps: TuiDeps): Promise<void> {
     // Home and overwrite rather than clear and redraw: a full clear makes the
     // screen blink on every keypress, and the point of this screen is that it
     // feels immediate.
-    out.write(HOME + lines.map((line) => line + EOL).join('\n') + EOS);
+    //
+    // Clamped to the width and capped to the height right here, so that no
+    // amount of arithmetic error anywhere above can make the screen scroll. A
+    // frame that is one line too tall or one column too wide loses its top
+    // row, and it is not obvious from the code which builder overflowed.
+    const frame = lines.slice(0, termRows).map((line) => clampVisible(line, width) + EOL);
+    out.write(HOME + frame.join('\n') + EOS);
   };
 
   /**
