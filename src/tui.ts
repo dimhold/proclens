@@ -53,7 +53,9 @@ export const initialState = (showAll: boolean, sort: SortKey): TuiState => ({
   sort,
   confirming: null,
   message: null,
-  detail: false,
+  // The pane under the list is on from the start: needing a keypress to see
+  // what the cursor is on defeats the point of a cursor.
+  detail: true,
 });
 
 /**
@@ -163,7 +165,7 @@ export function renderFooter(state: TuiState, rows: number, palette: Palette): s
   if (state.message) return palette('gray', ` ${state.message}`);
   return palette(
     'gray',
-    ` ${rows} rows   ↑↓ move   / search   x kill   d detail   a all   r refresh   q quit`,
+    ` ${rows} rows   ↑↓ move   / search   x kill   d pane   a all   r refresh   q quit`,
   );
 }
 
@@ -185,7 +187,10 @@ const ALT_SCREEN_ON = '\x1b[?1049h';
 const ALT_SCREEN_OFF = '\x1b[?1049l';
 const CURSOR_HIDE = '\x1b[?25l';
 const CURSOR_SHOW = '\x1b[?25h';
-const CLEAR = '\x1b[2J\x1b[H';
+const HOME = '\x1b[H';
+/** Erase to end of line, and to end of screen. */
+const EOL = '\x1b[K';
+const EOS = '\x1b[J';
 
 export async function runTui(deps: TuiDeps): Promise<void> {
   const out = deps.out ?? process.stdout;
@@ -229,30 +234,52 @@ export async function runTui(deps: TuiDeps): Promise<void> {
 
   const draw = (): void => {
     if (!snapshot) return;
-    const height = Math.max(4, (out.rows ?? 24) - 4);
-    const width = out.columns ?? 100;
+    const termRows = out.rows ?? 24;
+    // One column spare. A line filled to the exact terminal width makes many
+    // terminals wrap it, and every wrapped line pushes the screen up by one,
+    // which is why the list used to drift off the top.
+    const width = Math.max(40, (out.columns ?? 100) - 1);
+
+    const detailLines = state.detail && snapshot ? detailPane(width, palette) : [];
+    const listHeight = Math.max(3, termRows - 3 - detailLines.length);
+
     const rows = visibleRows(snapshot, state);
     const index = indexOfPid(rows, state.selected);
-    state = { ...state, offset: windowOffset(index, height, state.offset, rows.length) };
+    state = { ...state, offset: windowOffset(index, listHeight, state.offset, rows.length) };
 
     const lines: string[] = [];
     const captured = snapshot.capturedAt.toLocaleTimeString();
     lines.push(
       palette('bold', ` whotop  ${snapshot.platform}  ${rows.length} of ${snapshot.processes.length} processes  ${captured}`),
     );
-    lines.push('');
 
-    if (state.detail && rows[index]) {
-      lines.push(...renderDetail(rows[index], { width, palette, wide: true }));
-    } else {
-      const slice = rows.slice(state.offset, state.offset + height);
-      for (const [i, view] of slice.entries()) {
-        lines.push(renderRow(view, width, state.offset + i === index, palette));
-      }
-      if (slice.length === 0) lines.push(palette('gray', '  nothing matches'));
+    const slice = rows.slice(state.offset, state.offset + listHeight);
+    for (const [i, view] of slice.entries()) {
+      lines.push(renderRow(view, width, state.offset + i === index, palette));
     }
+    for (let i = slice.length; i < listHeight; i += 1) lines.push('');
+    if (slice.length === 0) lines[1] = palette('gray', '  nothing matches');
 
-    out.write(CLEAR + lines.join('\n') + '\n\n' + renderFooter(state, rows.length, palette));
+    lines.push(...detailLines);
+    lines.push(renderFooter(state, rows.length, palette));
+
+    // Home and overwrite rather than clear and redraw: a full clear makes the
+    // screen blink on every keypress, and the point of this screen is that it
+    // feels immediate.
+    out.write(HOME + lines.map((line) => line + EOL).join('\n') + EOS);
+  };
+
+  /** The pane under the list. Pure formatting over data already in hand, so
+   *  moving the cursor costs a redraw and never a collection. */
+  const detailPane = (width: number, pal: Palette): string[] => {
+    if (!snapshot) return [];
+    const rows = visibleRows(snapshot, state);
+    const view = rows[indexOfPid(rows, state.selected)];
+    if (!view) return [pal('gray', ' ' + '─'.repeat(Math.max(0, width - 2)))];
+    return [
+      pal('gray', ' ' + '─'.repeat(Math.max(0, width - 2))),
+      ...renderDetail(view, { width, palette: pal, wide: false }).slice(0, 6),
+    ];
   };
 
   const refresh = async (): Promise<void> => {
