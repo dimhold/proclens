@@ -206,7 +206,10 @@ export function renderRow(
   // `command` drop the front rather than the end.
   const text = columnText(view, mode);
   const trimmed = mode === 'what' ? truncateVisible(text, room) : truncateStart(text, room);
-  const line = ` ${pid} ${role} ${padEndVisible(trimmed, room)} ${right}`;
+  // A marker in the first column, not only reverse video. Colour is off when
+  // the output is not a terminal, off under NO_COLOR, and hard to see on some
+  // themes, and a cursor you cannot find is the same as no cursor at all.
+  const line = `${selected ? '›' : ' '}${pid} ${role} ${padEndVisible(trimmed, room)} ${right}`;
   return selected ? palette('inverse', padEndVisible(line, width)) : line;
 }
 
@@ -242,7 +245,13 @@ export function clampVisible(line: string, width: number): string {
       }
     }
     if (visible >= width) break;
-    out += line[i];
+    const ch = line[i] as string;
+    // A control character counts as one when measured and draws as something
+    // else entirely: a tab can open eight columns, a newline ends the line and
+    // makes one row into two. Either way the frame grows past the screen and
+    // the top scrolls away. Replaced with a space so that one character is one
+    // column, which is the assumption every width calculation here rests on.
+    out += ch < ' ' || ch === '\x7f' ? ' ' : ch;
     visible += 1;
     i += 1;
   }
@@ -267,6 +276,19 @@ const COLUMN_LABEL: Record<ColumnMode, string> = {
   where: 'where',
   command: 'command',
 };
+
+/**
+ * Right-align a quiet version stamp on the footer, when the line leaves room.
+ * Useful in a bug report and invisible the rest of the time, which is why it
+ * is dim and why it is dropped rather than allowed to push the keys off.
+ */
+export function withVersion(footer: string, version: string | null, width: number, palette: Palette): string {
+  if (!version) return footer;
+  const stamp = `v${version}`;
+  const gap = width - visibleLength(footer) - stamp.length - 1;
+  if (gap < 2) return footer;
+  return footer + ' '.repeat(gap) + palette('dim', stamp);
+}
 
 export function renderFooter(state: TuiState, rows: number, palette: Palette): string {
   // Order matters: the question a keypress is waiting on always wins the line.
@@ -301,6 +323,8 @@ export interface TuiDeps {
   /** Milliseconds between background refreshes. */
   readonly refreshMs?: number;
   readonly signal?: KillSignal;
+  /** Stamped small in the footer corner, so a screenshot says which build it is. */
+  readonly version?: string;
 }
 
 const ALT_SCREEN_ON = '\x1b[?1049h';
@@ -388,7 +412,7 @@ export async function runTui(deps: TuiDeps): Promise<void> {
       lines.push(...paneLines);
     }
 
-    lines.push(renderFooter(state, rows.length, palette));
+    lines.push(withVersion(renderFooter(state, rows.length, palette), deps.version ?? null, width, palette));
 
     // Home and overwrite rather than clear and redraw: a full clear makes the
     // screen blink on every keypress, and the point of this screen is that it

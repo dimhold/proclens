@@ -13,6 +13,7 @@ import {
   splitKeys,
   visibleRows,
   windowOffset,
+  withVersion,
 } from '../src/tui.js';
 import { exact } from '../src/types.js';
 import { createPalette } from '../src/color.js';
@@ -246,5 +247,46 @@ describe('clampVisible', () => {
 
   it('returns nothing for a width of zero rather than throwing', () => {
     expect(clampVisible('anything', 0)).toBe('');
+  });
+});
+
+describe('clampVisible and control characters', () => {
+  /**
+   * A tab measures as one character and draws as up to eight columns, so a
+   * command line containing one slipped past every width calculation, wrapped,
+   * and grew the frame past the screen. A newline was worse: it turned one row
+   * into two. Both are replaced so that one character is one column, which is
+   * what the rest of the layout assumes.
+   */
+  it('turns a tab into a single column instead of eight', () => {
+    const cut = clampVisible('a\tb', 10);
+    expect(cut).toBe('a b');
+    expect(cut).not.toContain('\t');
+  });
+
+  it('never lets a newline through, which would make one row into two', () => {
+    expect(clampVisible('a\nb\r\nc', 20)).not.toMatch(/[\r\n]/);
+  });
+
+  it('still counts a replaced control character towards the width', () => {
+    expect(clampVisible('\t'.repeat(50), 12)).toHaveLength(12);
+  });
+});
+
+describe('withVersion', () => {
+  const plain = createPalette(false);
+
+  it('puts the stamp at the right edge', () => {
+    const line = withVersion('keys', '0.1.0', 40, plain);
+    expect(line.trimEnd().endsWith('v0.1.0')).toBe(true);
+    expect(line.length).toBeLessThanOrEqual(40);
+  });
+
+  it('drops the stamp rather than pushing the keys off a narrow screen', () => {
+    expect(withVersion('a'.repeat(38), '0.1.0', 40, plain)).toBe('a'.repeat(38));
+  });
+
+  it('leaves the footer alone when there is no version to show', () => {
+    expect(withVersion('keys', null, 40, plain)).toBe('keys');
   });
 });

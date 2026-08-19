@@ -326,7 +326,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 
   if (options.command === 'top') {
     try {
-      await runTui({ collect: () => inspect(), signal: options.signal });
+      await runTui({ collect: () => inspect(), signal: options.signal, version: version() });
       return 0;
     } catch (error) {
       process.stderr.write(`whotop: ${(error as Error).message}\n`);
