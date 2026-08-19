@@ -38,8 +38,8 @@ function version(): string {
 const HELP = `whotop - what is this process, and which port is it holding
 
 Usage
-  whotop [query] [options]        list development processes
-  whotop top                      interactive screen: scroll, search, kill
+  whotop                          interactive screen: scroll, search, kill
+  whotop ls [query] [options]     one-shot listing, for scripts and pipes
   whotop port <number>            show what holds a port
   whotop kill --port <number>     kill the holder of a port, after confirming
   whotop kill --pid <number>      kill a process by pid
@@ -168,7 +168,14 @@ export function parseCliArgs(rawArgv: readonly string[]): Parsed {
   if (values.version) return { ...defaults(), command: 'version' };
 
   const [head, ...rest] = positionals;
-  let command: Parsed['command'] = 'ls';
+  /**
+   * Bare `whotop` opens the interactive screen, because that is what a person
+   * typing the name alone wants to do: look, then act. The rule is the plain
+   * one, no arguments at all, so that anything scripted keeps the old
+   * behaviour and never blocks on a terminal that is not there. `whotop ls`
+   * asks for the one-shot listing on purpose.
+   */
+  let command: Parsed['command'] = rawArgv.length === 0 ? 'top' : 'ls';
   let query: string | null = null;
   const ports = toNumbers(values.port, '--port');
   const pids = toNumbers(values.pid, '--pid');
@@ -305,13 +312,24 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     return 0;
   }
 
+  /**
+   * `whotop | grep vite` has no arguments and no terminal, and it used to
+   * print a listing. Opening a screen there, or refusing to run at all, would
+   * break every pipe that already exists, so an implicit interactive mode
+   * quietly steps aside. Typing `whotop top` into a pipe still says no,
+   * because that asked for something the pipe cannot give.
+   */
+  const implicitTop = options.command === 'top' && argv.length === 0;
+  if (implicitTop && !process.stdin.isTTY) {
+    options = { ...options, command: 'ls' };
+  }
+
   if (options.command === 'top') {
     try {
       await runTui({ collect: () => inspect(), signal: options.signal });
       return 0;
     } catch (error) {
-      process.stderr.write(`whotop: ${(error as Error).message}
-`);
+      process.stderr.write(`whotop: ${(error as Error).message}\n`);
       return 3;
     }
   }
