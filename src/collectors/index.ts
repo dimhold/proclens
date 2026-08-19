@@ -8,7 +8,7 @@ export { DarwinCollector, LinuxCollector, WindowsCollector };
 export class UnsupportedPlatformError extends Error {
   constructor(readonly received: string) {
     super(
-      `proclens has no collector for "${received}". Supported: win32, linux, darwin. ` +
+      `whotop has no collector for "${received}". Supported: win32, linux, darwin. ` +
         'Everything except process and port enumeration is platform independent, so a new collector is the only piece missing.',
     );
     this.name = 'UnsupportedPlatformError';

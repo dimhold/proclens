@@ -41,7 +41,7 @@ const CMDLINE_DENIED =
  * Windows does not expose another process's working directory through WMI at
  * all. Reading it would mean walking the PEB with ReadProcessMemory, which
  * needs matching bitness and debug rights and breaks on protected processes.
- * proclens does not pretend: it infers a directory from the command line when
+ * whotop does not pretend: it infers a directory from the command line when
  * the command line contains an absolute path, and labels it as inferred.
  */
 export const WINDOWS_CWD_NOTE =

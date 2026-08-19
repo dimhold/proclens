@@ -1,5 +1,5 @@
 /**
- * Killing is the one destructive thing proclens does, so it is deliberately
+ * Killing is the one destructive thing whotop does, so it is deliberately
  * narrow: it resolves the target first, shows what it found, and asks.
  */
 

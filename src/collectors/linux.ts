@@ -58,7 +58,7 @@ async function readCwd(pid: number): Promise<Field<string>> {
     if (code === 'EACCES' || code === 'EPERM') {
       return unavailable('the working directory of another user\'s process is readable only as root');
     }
-    return unavailable('the process exited while proclens was reading it');
+    return unavailable('the process exited while whotop was reading it');
   }
 }
 

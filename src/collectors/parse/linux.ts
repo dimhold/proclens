@@ -8,7 +8,7 @@ import type { PortBinding, Protocol } from '../../types.js';
 /**
  * The kernel reports process start time in clock ticks. USER_HZ has been 100
  * on every mainstream Linux build for a long time and there is no way to read
- * sysconf(_SC_CLK_TCK) from Node without a native addon, so proclens assumes
+ * sysconf(_SC_CLK_TCK) from Node without a native addon, so whotop assumes
  * 100 and says so in the platform notes.
  */
 export const USER_HZ = 100;

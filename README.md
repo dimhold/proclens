@@ -1,7 +1,7 @@
-# proclens
+# whotop
 
 <p align="center">
-  <img src="assets/hero.svg" alt="proclens listing developer processes on Windows: agent sessions, dev servers with their ports, an orphaned vite on 4311, browser-automation Chrome processes, and postgres" width="900">
+  <img src="assets/hero.svg" alt="whotop listing developer processes on Windows: agent sessions, dev servers with their ports, an orphaned vite on 4311, browser-automation Chrome processes, and postgres" width="900">
 </p>
 
 <p align="center">
@@ -14,11 +14,11 @@ One evening a page would not load. Port 4310 was taken, so my dev server refused
 
 The one I wanted was an orphaned vite from a branch I had switched away from an hour earlier. Its parent shell was long gone, so it just sat there holding the port. Two rows down were eight `chrome.exe` processes that a `chrome-devtools-mcp` run had spawned, indistinguishable from the browser I actually had open, and I nearly killed those too.
 
-The information I needed was all there. The command line said `vite`. The working directory said which project. The start time and the missing parent said orphan. The operating system just does not put those next to the pid. proclens does.
+The information I needed was all there. The command line said `vite`. The working directory said which project. The start time and the missing parent said orphan. The operating system just does not put those next to the pid. whotop does.
 
 ## What it does
 
-proclens reads the process table and the socket table, then joins them and reads what is actually in each command line, so a screen full of `node` and `python` becomes:
+whotop reads the process table and the socket table, then joins them and reads what is actually in each command line, so a screen full of `node` and `python` becomes:
 
 - **a role**, inferred from the command line: agent session, MCP server, dev server, test runner, browser automation, database, watcher, language server, and a dozen more
 - **the ports** each process is holding, listening ones first
@@ -31,28 +31,28 @@ Then it will kill by port or pid, after showing you exactly what it resolved and
 ## Install
 
 ```bash
-npm install -g proclens
+npm install -g whotop
 # or run it once, no install
-npx proclens
+npx whotop
 ```
 
-Zero runtime dependencies. `npx proclens` is one download with no supply chain to audit.
+Zero runtime dependencies. `npx whotop` is one download with no supply chain to audit.
 
 ## Use it
 
 ```bash
-proclens                    # developer-relevant processes, grouped by role
-proclens vite               # anything matching "vite" in cmd, cwd, project or name
-proclens --all              # every process, not just the interesting ones
-proclens -r dev-server      # filter by role (repeatable, comma separated)
-proclens -l                 # only processes holding a listening socket
-proclens -o                 # only orphans
+whotop                    # developer-relevant processes, grouped by role
+whotop vite               # anything matching "vite" in cmd, cwd, project or name
+whotop --all              # every process, not just the interesting ones
+whotop -r dev-server      # filter by role (repeatable, comma separated)
+whotop -l                 # only processes holding a listening socket
+whotop -o                 # only orphans
 ```
 
 Answer the port question directly:
 
 ```bash
-$ proclens port 4310
+$ whotop port 4310
  9120  dev-server vite
    name      node.exe
    started   2026-08-14T09:02:11.450Z  (2h 17m ago)
@@ -67,21 +67,21 @@ $ proclens port 4310
 Kill the holder of a port, after a confirmation that shows what you are about to end:
 
 ```bash
-proclens kill --port 4310
-proclens kill --pid 9412 --signal kill
-proclens kill --port 4310 --yes      # skip the prompt in a script
+whotop kill --port 4310
+whotop kill --pid 9412 --signal kill
+whotop kill --port 4310 --yes      # skip the prompt in a script
 ```
 
-See why each row was classified, and what the platform refused to tell proclens:
+See why each row was classified, and what the platform refused to tell whotop:
 
 ```bash
-proclens --explain
+whotop --explain
 ```
 
 Machine readable, for a script that decides what to do with the result:
 
 ```bash
-proclens --json | jq '.processes[] | select(.orphan.value == true) | .pid'
+whotop --json | jq '.processes[] | select(.orphan.value == true) | .pid'
 ```
 
 ### Options
@@ -106,7 +106,7 @@ proclens --json | jq '.processes[] | select(.orphan.value == true) | .pid'
 
 ## It tells you what it cannot see
 
-Every process attribute an operating system can refuse to disclose is wrapped so proclens can say *unavailable, and here is why* instead of printing a confident guess. `--explain` prints the honest capability matrix for the platform you are on.
+Every process attribute an operating system can refuse to disclose is wrapped so whotop can say *unavailable, and here is why* instead of printing a confident guess. `--explain` prints the honest capability matrix for the platform you are on.
 
 | | command line | working directory | ports | user |
 |---|---|---|---|---|
@@ -114,7 +114,7 @@ Every process attribute an operating system can refuse to disclose is wrapped so
 | **macOS** | full, from `ps` | your own via `lsof`, others need root | full, from `lsof` | full |
 | **Windows** | partial, elevated processes withhold it | inferred from the command line only | full, `Get-NetTCPConnection` | none |
 
-The Windows working directory is the sharp edge. Windows does not expose another process's cwd through any documented API short of walking its PEB with `ReadProcessMemory`, which needs matching bitness and debug rights and breaks on protected processes. proclens does not pretend. It infers a project directory from an absolute path in the command line and labels it `(inferred)`, or it says the value is unavailable. It never invents one.
+The Windows working directory is the sharp edge. Windows does not expose another process's cwd through any documented API short of walking its PEB with `ReadProcessMemory`, which needs matching bitness and debug rights and breaks on protected processes. whotop does not pretend. It infers a project directory from an absolute path in the command line and labels it `(inferred)`, or it says the value is unavailable. It never invents one.
 
 The same honesty covers ports without an owner (a socket in `TIME_WAIT` after its process exited), command lines withheld by another user's elevated process, and start times on a kernel where `/proc/stat` was unreadable. A missing helper binary such as `ss` or `lsof` is a warning in the report, never a crash.
 
@@ -122,14 +122,14 @@ The same honesty covers ports without an owner (a socket in `TIME_WAIT` after it
 
 A process table tells you `node` and stops. Everything useful lives in the command line, so that is where the rules look. `npm run dev` driving vite, a `--user-data-dir` that points at an automation profile rather than your everyday browser, `@modelcontextprotocol` in the arguments, `--remote-debugging-port` on a Chrome child: each is a rule, and each rule carries the sentence it prints as evidence. A classification you cannot check is a guess with better manners, so `--explain` shows you the one that fired.
 
-Commands hidden inside a shell are unwrapped first. On Windows almost everything spawned from a script shows up as `cmd.exe` with the real command buried in caret escapes, so without unwrapping, half of a developer machine classifies as "cmd". proclens undoes the quoting the way `CommandLineToArgvW` does, then classifies the command that actually runs.
+Commands hidden inside a shell are unwrapped first. On Windows almost everything spawned from a script shows up as `cmd.exe` with the real command buried in caret escapes, so without unwrapping, half of a developer machine classifies as "cmd". whotop undoes the quoting the way `CommandLineToArgvW` does, then classifies the command that actually runs.
 
 ## As a library
 
 The same snapshot the CLI renders is available programmatically, so a script can decide what to do with the processes it finds.
 
 ```ts
-import { inspect } from 'proclens';
+import { inspect } from 'whotop';
 
 const snapshot = await inspect();
 const orphanServers = snapshot.processes.filter(

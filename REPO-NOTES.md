@@ -4,7 +4,7 @@ Settings to apply when this repository is published on GitHub. Not shipped in th
 
 ## Name
 
-`proclens`
+`whotop`
 
 ## Description (one line, for the repo header)
 
@@ -43,7 +43,7 @@ mcp
 
 1. `npm run typecheck && npm test && npm run build`
 2. `npm pack --dry-run` should ship `dist/`, `README.md`, `LICENSE` and nothing else.
-3. Smoke test the packed tarball on each OS: `npx ./proclens-0.1.0.tgz --explain`.
+3. Smoke test the packed tarball on each OS: `npx ./whotop-0.1.0.tgz --explain`.
 4. Tag and publish.
 
 ## Things left undone
