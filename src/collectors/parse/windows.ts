@@ -47,6 +47,18 @@ const CMDLINE_DENIED =
 export const WINDOWS_CWD_NOTE =
   'Windows does not expose the working directory of another process; this is inferred from the command line';
 
+/**
+ * The same sentence must not serve both outcomes. Reusing WINDOWS_CWD_NOTE as
+ * the unavailable reason printed "this is inferred from the command line" on
+ * rows that show no directory at all, which claims an inference that never
+ * happened. Found 2026-08-19 on a real run: 164 of 433 processes read that way.
+ */
+export const WINDOWS_CWD_NO_CMDLINE =
+  'Windows does not expose the working directory of another process, and its command line is not readable either, so there is nothing to infer from';
+
+export const WINDOWS_CWD_NO_PATH =
+  'Windows does not expose the working directory of another process, and its command line carries no absolute path to infer one from';
+
 const WINDOWS_ABS_PATH = /(?:^|[\s"'=])([a-z]:[\\/](?:[^\\/:*?"<>|\r\n]+[\\/])*[^\\/:*?"<>|\r\n]*)/gi;
 
 /**
@@ -56,7 +68,7 @@ const WINDOWS_ABS_PATH = /(?:^|[\s"'=])([a-z]:[\\/](?:[^\\/:*?"<>|\r\n]+[\\/])*[
  * rather than a project.
  */
 export function inferWindowsCwd(commandLine: string | null): Field<string> {
-  if (!commandLine) return unavailable<string>(WINDOWS_CWD_NOTE);
+  if (!commandLine) return unavailable<string>(WINDOWS_CWD_NO_CMDLINE);
 
   // Anything spawned through cmd.exe hides its real command behind caret
   // escapes, and a path read out of those would come back mangled.
@@ -81,7 +93,7 @@ export function inferWindowsCwd(commandLine: string | null): Field<string> {
     candidates.push(dir.replace(/[\\/]+$/, ''));
   }
 
-  if (candidates.length === 0) return unavailable<string>(WINDOWS_CWD_NOTE);
+  if (candidates.length === 0) return unavailable<string>(WINDOWS_CWD_NO_PATH);
   // The longest path is the most specific thing the command line mentions.
   const best = candidates.reduce((a, b) => (b.length > a.length ? b : a));
   return inferred(best, WINDOWS_CWD_NOTE);
