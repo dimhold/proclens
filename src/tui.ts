@@ -42,7 +42,25 @@ export interface TuiState {
   /** Transient line under the list: the result of the last action. */
   readonly message: string | null;
   readonly detail: boolean;
+  /** Which middle column the list shows. */
+  readonly columns: ColumnMode;
+  /** True once escape has been pressed once and the quit question is open. */
+  readonly quitting: boolean;
+  /** Full screen detail, entered from the pane when it has more to show. */
+  readonly expanded: boolean;
 }
+
+/**
+ * What the wide middle column shows. One list cannot answer every question at
+ * once: sometimes you are looking for a tool, sometimes for the directory it
+ * runs in, sometimes for the exact command. Cycled with `c`.
+ */
+export type ColumnMode = 'what' | 'where' | 'command';
+
+export const COLUMN_MODES: readonly ColumnMode[] = ['what', 'where', 'command'];
+
+export const nextColumnMode = (mode: ColumnMode): ColumnMode =>
+  COLUMN_MODES[(COLUMN_MODES.indexOf(mode) + 1) % COLUMN_MODES.length] as ColumnMode;
 
 export const initialState = (showAll: boolean, sort: SortKey): TuiState => ({
   selected: null,
@@ -56,7 +74,15 @@ export const initialState = (showAll: boolean, sort: SortKey): TuiState => ({
   // The pane under the list is on from the start: needing a keypress to see
   // what the cursor is on defeats the point of a cursor.
   detail: true,
+  columns: 'what',
+  quitting: false,
+  expanded: false,
 });
+
+/** Height of the pane, counting its rule. Fixed on purpose: a pane that grew
+ *  with the selected process pushed the list off the screen, and a layout that
+ *  moves under the cursor is worse than one that shows less. */
+export const PANE_HEIGHT = 8;
 
 /**
  * Rows to draw, after the show-all toggle, the search box and the sort.
@@ -132,21 +158,63 @@ export function windowOffset(index: number, height: number, offset: number, tota
   return Math.min(Math.max(next, 0), maxOffset);
 }
 
+/**
+ * The middle column, per mode. `where` and `command` fall back to what is
+ * actually known rather than printing an empty cell, and say when the value is
+ * only inferred, because a directory guessed from a command line is a weaker
+ * claim than one the kernel handed over.
+ */
+export function columnText(view: ProcessView, mode: ColumnMode): string {
+  switch (mode) {
+    case 'where': {
+      const cwd = view.cwd.value;
+      if (!cwd) return view.cwd.note ? '·' : '';
+      return view.cwd.source === 'inferred' ? `${cwd} ~` : cwd;
+    }
+    case 'command':
+      return view.commandLine.value ?? '·';
+    case 'what':
+    default: {
+      const label = view.classification.label ?? view.name;
+      // Service names are the only identity many Windows rows have, so they
+      // sit beside the label rather than out of sight in the pane.
+      const services = view.services.length > 0 ? ` [${view.services.join(', ')}]` : '';
+      const project = view.project.value ? `  ${view.project.value}` : '';
+      return `${label}${services}${project}`;
+    }
+  }
+}
+
 /** One row of the list. Kept pure so the tests can read what a person sees. */
-export function renderRow(view: ProcessView, width: number, selected: boolean, palette: Palette): string {
+export function renderRow(
+  view: ProcessView,
+  width: number,
+  selected: boolean,
+  palette: Palette,
+  mode: ColumnMode = 'what',
+): string {
   const pid = String(view.pid).padStart(6);
   const role = padEndVisible(view.classification.role, 18);
-  const label = view.classification.label ?? view.name;
   const ports = formatPorts(view.ports);
   const age = formatAge(view.ageMs).padStart(8);
-  // Service names are the only identity many Windows rows have, so they sit
-  // beside the label rather than in the detail pane.
-  const services = view.services.length > 0 ? ` [${view.services.join(', ')}]` : '';
   const right = `${ports.padStart(14)}${age}`;
-  const room = Math.max(8, width - visibleLength(pid) - visibleLength(role) - visibleLength(right) - 3);
-  const middle = padEndVisible(truncateVisible(`${label}${services}`, room), room);
-  const line = ` ${pid} ${role} ${middle} ${right}`;
+  // Four spaces in the format, not three: one leading, three between columns.
+  // Subtracting three made every row exactly one character too wide, which is
+  // how the list came to wrap and drift up the screen.
+  const room = Math.max(8, width - visibleLength(pid) - visibleLength(role) - visibleLength(right) - 4);
+  // A long path is more useful from its tail than its head, so `where` and
+  // `command` drop the front rather than the end.
+  const text = columnText(view, mode);
+  const trimmed = mode === 'what' ? truncateVisible(text, room) : truncateStart(text, room);
+  const line = ` ${pid} ${role} ${padEndVisible(trimmed, room)} ${right}`;
   return selected ? palette('inverse', padEndVisible(line, width)) : line;
+}
+
+/** Keep the tail. `…\projects\shop-web` reads better than `C:\Users\dev\pro…`. */
+function truncateStart(text: string, width: number): string {
+  if (visibleLength(text) <= width) return text;
+  if (width <= 1) return text.slice(Math.max(0, text.length - width));
+  return '…' + text.slice(text.length - (width - 1));
 }
 
 function truncateVisible(text: string, width: number): string {
@@ -155,17 +223,30 @@ function truncateVisible(text: string, width: number): string {
   return text.slice(0, width - 1) + '…';
 }
 
+const COLUMN_LABEL: Record<ColumnMode, string> = {
+  what: 'what',
+  where: 'where',
+  command: 'command',
+};
+
 export function renderFooter(state: TuiState, rows: number, palette: Palette): string {
+  // Order matters: the question a keypress is waiting on always wins the line.
+  if (state.quitting) {
+    return palette('yellow', ' quit whotop?  esc or y to leave   any other key to stay ');
+  }
   if (state.confirming !== null) {
     return palette('yellow', ` kill pid ${state.confirming}?  y confirm   n cancel `);
   }
   if (state.searching) {
     return palette('cyan', ` search: ${state.search}_   enter accept   esc clear `);
   }
+  if (state.expanded) {
+    return palette('gray', ' full view   d or esc back');
+  }
   if (state.message) return palette('gray', ` ${state.message}`);
   return palette(
     'gray',
-    ` ${rows} rows   ↑↓ move   / search   x kill   d pane   a all   r refresh   q quit`,
+    ` ${rows} rows   ↑↓ move   / search   c column:${COLUMN_LABEL[state.columns]}   x kill   d full   a all   q quit`,
   );
 }
 
@@ -240,27 +321,34 @@ export async function runTui(deps: TuiDeps): Promise<void> {
     // which is why the list used to drift off the top.
     const width = Math.max(40, (out.columns ?? 100) - 1);
 
-    const detailLines = state.detail && snapshot ? detailPane(width, palette) : [];
-    const listHeight = Math.max(3, termRows - 3 - detailLines.length);
-
     const rows = visibleRows(snapshot, state);
     const index = indexOfPid(rows, state.selected);
-    state = { ...state, offset: windowOffset(index, listHeight, state.offset, rows.length) };
-
     const lines: string[] = [];
     const captured = snapshot.capturedAt.toLocaleTimeString();
     lines.push(
       palette('bold', ` whotop  ${snapshot.platform}  ${rows.length} of ${snapshot.processes.length} processes  ${captured}`),
     );
 
-    const slice = rows.slice(state.offset, state.offset + listHeight);
-    for (const [i, view] of slice.entries()) {
-      lines.push(renderRow(view, width, state.offset + i === index, palette));
-    }
-    for (let i = slice.length; i < listHeight; i += 1) lines.push('');
-    if (slice.length === 0) lines[1] = palette('gray', '  nothing matches');
+    if (state.expanded && rows[index]) {
+      // The whole screen, for the processes whose command line does not fit in
+      // a pane. Reached from the marker the pane shows when it had to cut.
+      const body = Math.max(3, termRows - 2);
+      const full = renderDetail(rows[index], { width, palette, wide: true }).slice(0, body);
+      lines.push(...full, ...Array.from({ length: body - full.length }, () => ''));
+    } else {
+      const paneLines = state.detail ? detailPane(width, palette) : [];
+      const listHeight = Math.max(3, termRows - 2 - paneLines.length);
+      state = { ...state, offset: windowOffset(index, listHeight, state.offset, rows.length) };
 
-    lines.push(...detailLines);
+      const slice = rows.slice(state.offset, state.offset + listHeight);
+      for (const [i, view] of slice.entries()) {
+        lines.push(renderRow(view, width, state.offset + i === index, palette, state.columns));
+      }
+      for (let i = slice.length; i < listHeight; i += 1) lines.push('');
+      if (slice.length === 0) lines[1] = palette('gray', '  nothing matches');
+      lines.push(...paneLines);
+    }
+
     lines.push(renderFooter(state, rows.length, palette));
 
     // Home and overwrite rather than clear and redraw: a full clear makes the
@@ -269,17 +357,36 @@ export async function runTui(deps: TuiDeps): Promise<void> {
     out.write(HOME + lines.map((line) => line + EOL).join('\n') + EOS);
   };
 
-  /** The pane under the list. Pure formatting over data already in hand, so
-   *  moving the cursor costs a redraw and never a collection. */
+  /**
+   * The pane under the list.
+   *
+   * Always exactly PANE_HEIGHT lines, whatever the selected process has to
+   * say. A pane sized to its contents grew when the cursor landed on a process
+   * with a long command line, pushed the list off the screen and made the
+   * layout jump about under the reader. Fixed height with an honest overflow
+   * marker is the better trade: it shows less, and it never moves.
+   *
+   * Pure formatting over data already collected, so moving the cursor costs a
+   * redraw and never a snapshot.
+   */
   const detailPane = (width: number, pal: Palette): string[] => {
-    if (!snapshot) return [];
+    const rule = pal('gray', ' ' + '─'.repeat(Math.max(0, width - 2)));
+    const body = Math.max(1, PANE_HEIGHT - 1);
+    const blank = (): string[] => Array.from({ length: body }, () => '');
+    if (!snapshot) return [rule, ...blank()];
+
     const rows = visibleRows(snapshot, state);
     const view = rows[indexOfPid(rows, state.selected)];
-    if (!view) return [pal('gray', ' ' + '─'.repeat(Math.max(0, width - 2)))];
-    return [
-      pal('gray', ' ' + '─'.repeat(Math.max(0, width - 2))),
-      ...renderDetail(view, { width, palette: pal, wide: false }).slice(0, 6),
-    ];
+    if (!view) return [rule, ...blank()];
+
+    const full = renderDetail(view, { width, palette: pal, wide: false });
+    if (full.length <= body) {
+      return [rule, ...full, ...Array.from({ length: body - full.length }, () => '')];
+    }
+    // Keep the last line for the marker, so nothing is silently cut away.
+    const shown = full.slice(0, body - 1);
+    const hidden = full.length - shown.length;
+    return [rule, ...shown, pal('cyan', `  … ${hidden} more lines, press d for the full view`)];
   };
 
   const refresh = async (): Promise<void> => {
@@ -315,6 +422,21 @@ export async function runTui(deps: TuiDeps): Promise<void> {
     if (!snapshot) return;
     const rows = visibleRows(snapshot, state);
     const height = Math.max(4, (out.rows ?? 24) - 4);
+
+    /**
+     * Escape asks before it leaves, and escape again answers. A single key
+     * that quits is the wrong shape for a screen that can kill things: the
+     * same finger reaching for it clears a search and closes the full view.
+     */
+    if (state.quitting) {
+      if (key === '\x1b' || key === 'y' || key === 'Y' || key === 'q') {
+        quit = true;
+        return;
+      }
+      state = { ...state, quitting: false };
+      draw();
+      return;
+    }
 
     if (state.confirming !== null) {
       if (key === 'y' || key === 'Y') await doKill(state.confirming);
@@ -370,7 +492,25 @@ export async function runTui(deps: TuiDeps): Promise<void> {
         break;
       case 'd':
       case '\r':
-        state = { ...state, detail: !state.detail };
+        // From the list, d opens the full view the pane's marker points at.
+        // From the full view, it goes back.
+        state = { ...state, expanded: !state.expanded, message: null };
+        break;
+      case 'D':
+        // Shift hides the pane outright, for anyone who wants more rows.
+        state = { ...state, detail: !state.detail, expanded: false, message: null };
+        break;
+      case 'c':
+        state = { ...state, columns: nextColumnMode(state.columns), message: null };
+        break;
+      case '\x1b':
+        // Escape backs out of the full view first, and only asks about
+        // leaving when there is nothing left to back out of.
+        state = state.expanded
+          ? { ...state, expanded: false }
+          : state.search !== ''
+            ? { ...state, search: '', message: null }
+            : { ...state, quitting: true };
         break;
       case 'a':
         state = { ...state, showAll: !state.showAll, message: null };

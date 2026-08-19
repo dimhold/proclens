@@ -120,3 +120,46 @@ describe('classify: what it refuses to guess', () => {
     expect([...confidences].sort((a, b) => b - a)).toEqual(confidences);
   });
 });
+
+describe('classify: agents installed as a native binary', () => {
+  /**
+   * The agent rules were written around the npm install shape and looked for
+   * `@anthropic-ai/claude-code` or `/claude ` in the command line. A native
+   * install matches neither, so five running sessions on a Windows machine
+   * were classified unknown and dropped out of the default view entirely.
+   * Found 2026-08-19 by looking for them and not finding them.
+   */
+  it('names a Claude session installed as claude.exe', () => {
+    const result = classify({
+      name: 'claude.exe',
+      commandLine: 'C:\Users\me\.local\bin\claude.exe --resume',
+      ports: [],
+    });
+    expect(result.role).toBe('agent-session');
+    expect(result.label).toBe('claude');
+  });
+
+  it('names it with no arguments at all, which is how a fresh session starts', () => {
+    const result = classify({ name: 'claude.exe', commandLine: 'C:\Users\me\.local\bin\claude.exe', ports: [] });
+    expect(result.role).toBe('agent-session');
+  });
+
+  it('still names the npm install shape, which the older rule covers', () => {
+    const result = classify({
+      name: 'node',
+      commandLine: 'node /usr/lib/node_modules/@anthropic-ai/claude-code/cli.js',
+      ports: [],
+    });
+    expect(result.role).toBe('agent-session');
+  });
+
+  /**
+   * The binary list holds only names that mean one thing. A program called
+   * `goose` is somebody else's often enough that claiming it is an agent would
+   * be exactly the confident wrong answer this tool refuses to give.
+   */
+  it('does not claim an unrelated program is an agent because of its name', () => {
+    const result = classify({ name: 'goose.exe', commandLine: 'C:\tools\goose.exe migrate up', ports: [] });
+    expect(result.role).not.toBe('agent-session');
+  });
+});

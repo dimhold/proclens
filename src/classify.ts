@@ -61,6 +61,29 @@ const entryIs =
     return entry !== undefined && entry !== null && names.includes(entry);
   };
 
+/**
+ * Match on the executable basename, ignoring a Windows extension.
+ *
+ * The agent rules were written around the npm install shape, so they look for
+ * `@anthropic-ai/claude-code` or `/claude ` in the command line. A native
+ * install is neither: `C:\Users\me\.local\bin\claude.exe --resume` has
+ * backslashes and no trailing space, so every token missed and five live
+ * sessions were classified unknown and dropped from the default view. Found
+ * 2026-08-19 on a machine that was running them.
+ *
+ * Only names that mean one thing belong here. A bare `goose` or `gemini` is
+ * somebody else's program often enough that calling it an agent session would
+ * be the confident wrong answer this tool refuses to give.
+ */
+const nameIs =
+  (...names: string[]) =>
+  (ctx: RuleContext): boolean =>
+    names.includes(baseBinary(ctx.name));
+
+const baseBinary = (name: string): string => name.toLowerCase().replace(/\.(exe|cmd|bat|com)$/, '');
+
+const AGENT_BINARIES = ['claude', 'cursor-agent', 'opencode', 'aider'];
+
 /** First needle present in the haystack, for reasons that quote the evidence. */
 function firstHit(ctx: RuleContext, needles: readonly string[]): string {
   return needles.find((n) => ctx.haystack.includes(n)) ?? needles[0] ?? '';
@@ -312,6 +335,16 @@ const BROWSER_AUTOMATION_TOKENS = [
  * a confidence, so the more specific rule comes first.
  */
 export const RULES: readonly Rule[] = [
+  {
+    // Sits above agent-cli because a native binary says what it is more
+    // plainly than a path substring does.
+    id: 'agent-binary',
+    role: 'agent-session',
+    confidence: 0.95,
+    test: nameIs(...AGENT_BINARIES),
+    reason: (ctx) => `the executable itself is an agent CLI (${ctx.name})`,
+    label: (ctx) => baseBinary(ctx.name),
+  },
   {
     id: 'agent-cli',
     role: 'agent-session',

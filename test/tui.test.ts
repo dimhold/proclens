@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   anchorSelection,
+  columnText,
+  nextColumnMode,
+  PANE_HEIGHT,
+  renderRow,
   indexOfPid,
   initialState,
   matchesSearch,
@@ -10,6 +14,7 @@ import {
   windowOffset,
 } from '../src/tui.js';
 import { exact } from '../src/types.js';
+import { createPalette } from '../src/color.js';
 import type { ProcessView, Snapshot } from '../src/types.js';
 
 const view = (over: Partial<ProcessView> = {}): ProcessView => ({
@@ -146,5 +151,66 @@ describe('splitKeys', () => {
 
   it('passes a lone escape through, which is how search is cleared', () => {
     expect(splitKeys('\x1b')).toEqual(['\x1b']);
+  });
+});
+
+describe('columnText', () => {
+  it('shows what a process is, with its services and project beside it', () => {
+    const row = view({ services: ['Dnscache'] });
+    const text = columnText(row, 'what');
+    expect(text).toContain('vite');
+    expect(text).toContain('Dnscache');
+    expect(text).toContain('shop-web');
+  });
+
+  /**
+   * A directory guessed from a command line is a weaker claim than one the
+   * kernel handed over, and the list has to say so without a whole column of
+   * prose. A trailing mark is enough, and the pane carries the reason.
+   */
+  it('marks a working directory that was only inferred', () => {
+    const kernel = columnText(view(), 'where');
+    expect(kernel.endsWith('~')).toBe(false);
+    const guessed = columnText(
+      view({ cwd: { value: 'C:\\projects\\api', source: 'inferred', note: 'from the command line' } }),
+      'where',
+    );
+    expect(guessed.endsWith('~')).toBe(true);
+  });
+
+  it('falls back to a mark rather than an empty cell', () => {
+    const row = view({ cwd: { value: null, source: 'unavailable', note: 'refused' } });
+    expect(columnText(row, 'where')).toBe('·');
+  });
+
+  it('cycles the modes and comes back round', () => {
+    expect(nextColumnMode('what')).toBe('where');
+    expect(nextColumnMode('where')).toBe('command');
+    expect(nextColumnMode('command')).toBe('what');
+  });
+});
+
+describe('renderRow', () => {
+  const plain = createPalette(false);
+
+  it('never draws wider than it was given, so nothing wraps and shifts the screen', () => {
+    const long = view({ commandLine: exact('node ' + 'x'.repeat(400)) });
+    for (const mode of ['what', 'where', 'command'] as const) {
+      expect(renderRow(long, 100, false, plain, mode).length).toBeLessThanOrEqual(100);
+      expect(renderRow(long, 100, true, plain, mode).length).toBeLessThanOrEqual(100);
+    }
+  });
+
+  /** A long path is recognisable from its tail, not its head. */
+  it('keeps the end of a path rather than the start', () => {
+    const deep = view({ cwd: exact('C:\\Users\\dev\\a\\b\\c\\d\\e\\f\\g\\shop-web') });
+    expect(renderRow(deep, 70, false, plain, 'where')).toContain('shop-web');
+  });
+});
+
+describe('PANE_HEIGHT', () => {
+  it('is a constant, because a pane that resizes with its contents moves the list under the cursor', () => {
+    expect(PANE_HEIGHT).toBeGreaterThan(2);
+    expect(Number.isInteger(PANE_HEIGHT)).toBe(true);
   });
 });
