@@ -47,6 +47,11 @@ export class DarwinCollector implements Collector {
         cwd: cwd ? exact(cwd) : unavailable(CWD_DENIED),
         startedAt: row.startedAt,
         user: row.user || null,
+        // macOS keeps this information in launchd and `launchctl list` exposes
+        // it. Left empty rather than guessed: there is no macOS machine to
+        // verify against yet, and an unverified name printed with confidence is
+        // exactly the failure this tool exists to avoid.
+        services: [],
       };
     });
 

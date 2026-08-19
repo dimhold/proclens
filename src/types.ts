@@ -52,6 +52,18 @@ export interface RawProcess {
   readonly cwd: Field<string>;
   readonly startedAt: Date | null;
   readonly user: string | null;
+  /**
+   * Names the operating system's own service registry gives this pid.
+   *
+   * Deliberately a plain array and not a {@link Field}: the registry is
+   * readable without privileges, so an empty list means "this process is not a
+   * service", which is an answer rather than a refusal. When the registry
+   * itself could not be read the collector says so in `warnings` and every
+   * process comes back with an empty list, which is the honest degradation.
+   *
+   * A single pid can host several services. svchost.exe routinely hosts four.
+   */
+  readonly services: readonly string[];
 }
 
 export type Role =
