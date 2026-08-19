@@ -1,7 +1,7 @@
 # whotop
 
 <p align="center">
-  <img src="assets/hero.svg" alt="whotop listing developer processes on Windows: agent sessions, dev servers with their ports, an orphaned vite on 4311, browser-automation Chrome processes, and postgres" width="900">
+  <img src="assets/screen.svg" alt="The whotop interactive screen on Windows: a Claude agent session, two vite dev servers told apart by project, the cursor resting on an orphan holding port 4311, an MCP server, postgres, and two svchost processes named by the service registry as a WireGuard tunnel and CloudflareWARP. A fixed pane below shows the selected process and how many lines it had to hide." width="900">
 </p>
 
 <p align="center">
@@ -24,7 +24,10 @@ whotop reads the process table and the socket table, then joins them and reads w
 - **the ports** each process is holding, listening ones first
 - **the working directory** and the project it belongs to, so two `vite` processes are told apart by where they run
 - **an orphan flag**, because the process holding your port is usually the one whose parent already exited
+- **the name the system itself uses**, from the service registry, which needs no elevation and names processes that disclose nothing else
 - **the evidence**, under `--explain`, so every role names the rule that produced it
+
+That last one earns its place. On a Windows machine with 443 processes, 164 disclosed no command line at all. The service registry named 115 of them, a WireGuard tunnel and CloudflareWARP among them, all of which had been reading as `unknown`. Linux answers the same question from `/proc/<pid>/cgroup`, which also says when a process is inside a container.
 
 Then it will kill by port or pid, after showing you exactly what it resolved and asking.
 
@@ -40,14 +43,33 @@ Zero runtime dependencies. `npx whotop` is one download with no supply chain to 
 
 ## Use it
 
+Typed on its own, `whotop` opens an interactive screen. Everything else is a one-shot listing:
+
 ```bash
-whotop                    # developer-relevant processes, grouped by role
-whotop vite               # anything matching "vite" in cmd, cwd, project or name
-whotop --all              # every process, not just the interesting ones
-whotop -r dev-server      # filter by role (repeatable, comma separated)
-whotop -l                 # only processes holding a listening socket
-whotop -o                 # only orphans
+whotop                    # the interactive screen
+whotop ls                 # developer-relevant processes, grouped by role
+whotop ls vite            # anything matching "vite" in cmd, cwd, project or name
+whotop ls --all           # every process, not just the interesting ones
+whotop ls -r dev-server   # filter by role (repeatable, comma separated)
+whotop ls -l              # only processes holding a listening socket
+whotop ls -o              # only orphans
 ```
+
+A pipe always gets the listing, so `whotop | grep vite` keeps working.
+
+### The interactive screen
+
+```
+↑ ↓  or  j k     move            /     search, esc clears
+PgUp PgDn        page            c     switch the middle column
+g  G             first, last     x     kill the selected process
+d                full view       a     show every process
+esc              ask to quit     q     quit
+```
+
+The middle column cycles between what a process is, where it runs, and the command it ran, because one list cannot answer every question at once. The pane under it follows the cursor with no keypress, and is a fixed height: sized to its contents it grew on a long command line and pushed the list off the screen, so when it has to cut it says how many lines are hidden and `d` opens them.
+
+The cursor follows a **pid**, never a row number. The list reorders whenever a process exits, and a cursor anchored to a row would quietly settle on a different process than the one you were reading. Killing that one is the mistake this tool exists to prevent.
 
 Answer the port question directly:
 
@@ -115,6 +137,8 @@ Every process attribute an operating system can refuse to disclose is wrapped so
 | **Windows** | partial, elevated processes withhold it | inferred from the command line only | full, `Get-NetTCPConnection` | none |
 
 The Windows working directory is the sharp edge. Windows does not expose another process's cwd through any documented API short of walking its PEB with `ReadProcessMemory`, which needs matching bitness and debug rights and breaks on protected processes. whotop does not pretend. It infers a project directory from an absolute path in the command line and labels it `(inferred)`, or it says the value is unavailable. It never invents one.
+
+One case is worth naming, because the honest-looking answer was the wrong one. `C:\Users\me\.local\bin\claude.exe --resume` contains exactly one absolute path: its own. Reporting that directory made five agent sessions look as though they all worked inside their install folder. Nothing there was false, the field said `inferred`, and it was still useless. The directory a program lives in is not the directory it runs in, so that candidate is now rejected and the row says why it has nothing.
 
 The same honesty covers ports without an owner (a socket in `TIME_WAIT` after its process exited), command lines withheld by another user's elevated process, and start times on a kernel where `/proc/stat` was unreadable. A missing helper binary such as `ss` or `lsof` is a warning in the report, never a crash.
 
