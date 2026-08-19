@@ -12,6 +12,7 @@ import { filterProcesses, holdersOfPort } from './filter.js';
 import type { SortKey } from './filter.js';
 import { inspect } from './inspect.js';
 import { askYesNo, describeTarget, killProcesses, signalNote } from './kill.js';
+import { runTui } from './tui.js';
 import type { KillSignal } from './kill.js';
 import {
   renderCapabilities,
@@ -38,6 +39,7 @@ const HELP = `whotop - what is this process, and which port is it holding
 
 Usage
   whotop [query] [options]        list development processes
+  whotop top                      interactive screen: scroll, search, kill
   whotop port <number>            show what holds a port
   whotop kill --port <number>     kill the holder of a port, after confirming
   whotop kill --pid <number>      kill a process by pid
@@ -75,7 +77,7 @@ Exit codes
 `;
 
 interface Parsed {
-  readonly command: 'ls' | 'port' | 'kill' | 'help' | 'version';
+  readonly command: 'ls' | 'top' | 'port' | 'kill' | 'help' | 'version';
   readonly query: string | null;
   readonly roles: Role[];
   readonly pids: number[];
@@ -171,7 +173,9 @@ export function parseCliArgs(rawArgv: readonly string[]): Parsed {
   const ports = toNumbers(values.port, '--port');
   const pids = toNumbers(values.pid, '--pid');
 
-  if (head === 'port') {
+  if (head === 'top') {
+    command = 'top';
+  } else if (head === 'port') {
     command = 'port';
     const target = rest[0];
     if (target === undefined) throw new UsageError('`whotop port` needs a port number');
@@ -299,6 +303,17 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   if (options.command === 'version') {
     process.stdout.write(`${version()}\n`);
     return 0;
+  }
+
+  if (options.command === 'top') {
+    try {
+      await runTui({ collect: () => inspect(), signal: options.signal });
+      return 0;
+    } catch (error) {
+      process.stderr.write(`whotop: ${(error as Error).message}
+`);
+      return 3;
+    }
   }
 
   const colorEnabled = options.color ?? detectColorSupport();
