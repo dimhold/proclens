@@ -57,15 +57,15 @@ const ROOT = 'D:\\Temp\\claude';
 function machine(created: Record<string, string>): Tree {
   return {
     dirs: {
-      [ROOT]: ['D--work-ds-social-media', 'D--work-ds-dimhold-by', 'chrome-shot-profile'],
-      [`${ROOT}\\D--work-ds-social-media`]: [SOCIAL, 'notes'],
-      [`${ROOT}\\D--work-ds-dimhold-by`]: [BLOG],
+      [ROOT]: ['D--work-projects-shop-web', 'D--work-projects-example-dev', 'chrome-shot-profile'],
+      [`${ROOT}\\D--work-projects-shop-web`]: [SOCIAL, 'notes'],
+      [`${ROOT}\\D--work-projects-example-dev`]: [BLOG],
       [`${ROOT}\\chrome-shot-profile`]: ['Crashpad'],
       'D:\\': ['work', 'Temp'],
-      'D:\\work': ['ds', 'whotop'],
-      'D:\\work\\ds': ['social-media', 'dimhold.by'],
-      'D:\\work\\ds\\social-media': [],
-      'D:\\work\\ds\\dimhold.by': [],
+      'D:\\work': ['projects', 'whotop'],
+      'D:\\work\\projects': ['shop-web', 'example.dev'],
+      'D:\\work\\projects\\shop-web': [],
+      'D:\\work\\projects\\example.dev': [],
     },
     created,
   };
@@ -97,12 +97,12 @@ describe('the trace rule table', () => {
 
 describe('scanTraces', () => {
   const scan = source({
-    [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-    [`${ROOT}\\D--work-ds-dimhold-by\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
+    [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+    [`${ROOT}\\D--work-projects-example-dev\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
   });
 
   it('reads the dated directories under the root', () => {
-    expect(scan.entries.map((e) => e.names.slug).sort()).toEqual(['D--work-ds-dimhold-by', 'D--work-ds-social-media']);
+    expect(scan.entries.map((e) => e.names.slug).sort()).toEqual(['D--work-projects-example-dev', 'D--work-projects-shop-web']);
   });
 
   it('skips entries the rule refuses to read, which is how unrelated directories drop out', () => {
@@ -113,7 +113,7 @@ describe('scanTraces', () => {
   });
 
   it('drops an entry with no creation time instead of guessing one', () => {
-    const partial = source({ [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' });
+    const partial = source({ [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' });
     expect(partial.entries).toHaveLength(1);
   });
 
@@ -139,15 +139,15 @@ describe('scanTraces', () => {
 
 describe('matchTrace', () => {
   const scan = source({
-    [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-    [`${ROOT}\\D--work-ds-dimhold-by\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
+    [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+    [`${ROOT}\\D--work-projects-example-dev\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
   });
 
   it('names the project whose directory was created next to the process start', () => {
     const outcome = matchTrace(claude('2026-08-18T18:48:22.909Z'), scan);
     expect(outcome.kind).toBe('matched');
     if (outcome.kind !== 'matched') return;
-    expect(outcome.field.value).toBe('D:\\work\\ds\\social-media');
+    expect(outcome.field.value).toBe('D:\\work\\projects\\shop-web');
     expect(outcome.field.source).toBe('inferred');
   });
 
@@ -166,16 +166,16 @@ describe('matchTrace', () => {
    */
   it('refuses when two directories from different projects fall inside the tie window', () => {
     const tie = source({
-      [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-      [`${ROOT}\\D--work-ds-dimhold-by\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
+      [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+      [`${ROOT}\\D--work-projects-example-dev\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
     });
     const outcome = matchTrace(claude('2026-08-18T18:48:22.909Z'), tie);
     expect(outcome.kind).toBe('ambiguous');
     if (outcome.kind === 'no-rule') return;
     expect(outcome.field.value).toBeNull();
     expect(outcome.field.source).toBe('unavailable');
-    expect(outcome.field.note).toMatch(/D--work-ds-social-media/);
-    expect(outcome.field.note).toMatch(/D--work-ds-dimhold-by/);
+    expect(outcome.field.note).toMatch(/D--work-projects-shop-web/);
+    expect(outcome.field.note).toMatch(/D--work-projects-example-dev/);
   });
 
   it('does not call two directories of the same project a tie, because they agree on the answer', () => {
@@ -183,16 +183,16 @@ describe('matchTrace', () => {
       env: { tmpdir: TEMP, home: 'C:\\Users\\dev' },
       io: fakeIo({
         dirs: {
-          [ROOT]: ['D--work-ds-social-media'],
-          [`${ROOT}\\D--work-ds-social-media`]: [SOCIAL, BLOG],
+          [ROOT]: ['D--work-projects-shop-web'],
+          [`${ROOT}\\D--work-projects-shop-web`]: [SOCIAL, BLOG],
           'D:\\': ['work'],
-          'D:\\work': ['ds'],
-          'D:\\work\\ds': ['social-media'],
-          'D:\\work\\ds\\social-media': [],
+          'D:\\work': ['projects'],
+          'D:\\work\\projects': ['shop-web'],
+          'D:\\work\\projects\\shop-web': [],
         },
         created: {
-          [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-          [`${ROOT}\\D--work-ds-social-media\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
+          [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+          [`${ROOT}\\D--work-projects-shop-web\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
         },
       }),
     });
@@ -256,16 +256,16 @@ describe('decoding a directory name back into a path', () => {
   });
 
   it('walks nested directories and keeps a dash that belongs to a directory name', () => {
-    expect(resolveSlugPath('D--work-ds-social-media', io).path).toBe('D:\\work\\ds\\social-media');
+    expect(resolveSlugPath('D--work-projects-shop-web', io).path).toBe('D:\\work\\projects\\shop-web');
   });
 
   /**
    * The encoding flattens every punctuation character to a dash, so
-   * `dimhold.by` and `dimhold-by` and `dimhold\by` are the same name. Only the
+   * `example.dev` and `example-dev` and `example\by` are the same name. Only the
    * disk can say which one it was, which is why the decoder asks it.
    */
   it('recovers a character the encoding threw away', () => {
-    expect(resolveSlugPath('D--work-ds-dimhold-by', io).path).toBe('D:\\work\\ds\\dimhold.by');
+    expect(resolveSlugPath('D--work-projects-example-dev', io).path).toBe('D:\\work\\projects\\example.dev');
   });
 
   it('refuses when two real directories encode to the same name', () => {
@@ -289,12 +289,12 @@ describe('decoding a directory name back into a path', () => {
   });
 
   it('says nothing rather than throwing when the drive is not readable', () => {
-    expect(resolveSlugPath('D--work-ds-social-media', fakeIo({ dirs: {} })).path).toBeNull();
+    expect(resolveSlugPath('D--work-projects-shop-web', fakeIo({ dirs: {} })).path).toBeNull();
   });
 
   it('encodes the way the tools do', () => {
-    expect(encodePathSegment('social-media')).toBe('social-media');
-    expect(encodePathSegment('dimhold.by')).toBe('dimhold-by');
+    expect(encodePathSegment('shop-web')).toBe('shop-web');
+    expect(encodePathSegment('example.dev')).toBe('example-dev');
     expect(encodePathSegment('my app_2')).toBe('my-app-2');
   });
 });
@@ -335,20 +335,20 @@ describe('a snapshot built with traces', () => {
   it('fills a working directory the platform refused to disclose, and marks it inferred', () => {
     const snapshot = build(
       source({
-        [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-        [`${ROOT}\\D--work-ds-dimhold-by\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
+        [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+        [`${ROOT}\\D--work-projects-example-dev\\${BLOG}`]: '2026-08-18T18:49:02.100Z',
       }),
     );
     const view = snapshot.processes[0];
-    expect(view?.cwd.value).toBe('D:\\work\\ds\\social-media');
+    expect(view?.cwd.value).toBe('D:\\work\\projects\\shop-web');
     expect(view?.cwd.source).toBe('inferred');
   });
 
   it('leaves the column empty and says why when the two candidates cannot be told apart', () => {
     const snapshot = build(
       source({
-        [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
-        [`${ROOT}\\D--work-ds-dimhold-by\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
+        [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z',
+        [`${ROOT}\\D--work-projects-example-dev\\${BLOG}`]: '2026-08-18T18:48:23.500Z',
       }),
     );
     const view = snapshot.processes[0];
@@ -357,7 +357,7 @@ describe('a snapshot built with traces', () => {
   });
 
   it('admits under --explain that some rows were named by a directory and not by the process table', () => {
-    const snapshot = build(source({ [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' }));
+    const snapshot = build(source({ [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' }));
     expect(snapshot.capabilities.notes.join(' ')).toMatch(/dated directory they create at startup/);
   });
 
@@ -371,7 +371,7 @@ describe('a snapshot built with traces', () => {
       {
         platform: 'linux',
         capabilities: CAPABILITIES,
-        traces: source({ [`${ROOT}\\D--work-ds-social-media\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' }),
+        traces: source({ [`${ROOT}\\D--work-projects-shop-web\\${SOCIAL}`]: '2026-08-18T18:48:21.000Z' }),
         resolveProject: () => unavailable<string>('stubbed in tests'),
       },
     );

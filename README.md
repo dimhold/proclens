@@ -1,7 +1,15 @@
 # whotop
 
 <p align="center">
-  <img src="assets/screen.svg" alt="The whotop interactive screen on Windows: a Claude agent session, two vite dev servers told apart by project, the cursor resting on an orphan holding port 4311, an MCP server, postgres, and two svchost processes named by the service registry as a WireGuard tunnel and CloudflareWARP. A fixed pane below shows everything the selected process discloses: its name, start time, parent, orphan flag, working directory, project, port and the rule that named it." width="900">
+  <a href="https://www.npmjs.com/package/whotop"><img alt="npm" src="https://img.shields.io/npm/v/whotop?color=%23cb3837&label=npm"></a>
+  <a href="https://github.com/dimhold/whotop/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dimhold/whotop/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="#license"><img alt="MIT" src="https://img.shields.io/npm/l/whotop?color=blue"></a>
+  <img alt="node" src="https://img.shields.io/node/v/whotop">
+  <img alt="dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-brightgreen">
+</p>
+
+<p align="center">
+  <img src="assets/screen.png" alt="The whotop interactive screen on Windows: a Claude agent session, two vite dev servers told apart by project, the cursor resting on an orphan holding port 4311, an MCP server, postgres, and two svchost processes named by the service registry as a WireGuard tunnel and CloudflareWARP. A fixed pane below shows everything the selected process discloses: its name, start time, parent, orphan flag, working directory, project, port and the rule that named it." width="900">
 </p>
 
 <p align="center">
@@ -131,6 +139,17 @@ whotop --json | jq '.processes[] | select(.orphan.value == true) | .pid'
 -y, --yes             skip the kill confirmation prompt
 ```
 
+### Exit codes
+
+| Code | Meaning |
+| ---- | ------- |
+| `0` | it answered |
+| `1` | nothing matched: no process holds that port, no pid to kill |
+| `2` | the arguments were wrong |
+| `3` | the process table could not be read at all |
+
+So `whotop port 4310 >/dev/null || echo free` says what it looks like it says.
+
 ## It tells you what it cannot see
 
 Every process attribute an operating system can refuse to disclose is wrapped so whotop can say *unavailable, and here is why* instead of printing a confident guess. `--explain` prints the honest capability matrix for the platform you are on.
@@ -159,9 +178,9 @@ A process whose command line says nothing about its work often writes a director
 
 ```
 15044  agent-session  claude         1d 15h
-       cwd D:\work\ds\social-media (inferred)  [social-media]
-       cmd C:\Users\37529\.local\bin\claude.exe --resume
-       via matched to D:\Temp\claude\D--work-ds-social-media\85fa958f-..., created 1.9s from this
+       cwd D:\work\projects\shop-web (inferred)  [shop-web]
+       cmd C:\Users\dev\.local\bin\claude.exe --resume
+       via matched to D:\Temp\claude\D--work-projects-shop-web\85fa958f-..., created 1.9s from this
            process start (Claude Code session 85fa958f); a time correlation inside a 45.0s window,
            not a reading of the process
 ```
@@ -177,7 +196,7 @@ What it will not do:
 
 - it never returns `exact`, only `inferred` with the directory and the time difference in the note, or `unavailable` with the reason
 - it never overwrites a directory the operating system actually disclosed
-- a directory name is a lossy encoding, since every punctuation character became a dash, so `dimhold.by` and `dimhold-by` are the same name. whotop decodes it by walking the disk and asking which real directory encodes to that name, and reports nothing when the answer is not unique or when the project has been renamed or deleted since
+- a directory name is a lossy encoding, since every punctuation character became a dash, so `example.dev` and `example-dev` are the same name. whotop decodes it by walking the disk and asking which real directory encodes to that name, and reports nothing when the answer is not unique or when the project has been renamed or deleted since
 - a session started before its trace directory was cleaned away, or on a machine where `TEMP` moved between runs, simply has no match, and the row says so
 - it only reads the disk when the process table actually contains a process some rule speaks for, so the common listing costs nothing
 
@@ -209,7 +228,9 @@ npm test              # vitest
 npm run build         # emit dist/
 ```
 
-The parsers are tested against captured fixtures of real `ss`, `lsof`, `/proc` and PowerShell output under `test/fixtures`, so platform behaviour is exercised on every machine rather than only on the one that produced it.
+The parsers are tested against captured fixtures of real `ss`, `lsof`, `/proc` and PowerShell output under `test/fixtures`, so platform behaviour is exercised on every machine rather than only on the one that produced it. CI then runs the built CLI against the runner itself on Windows, Linux and macOS, because a fixture cannot notice a collector that stopped working on a platform nobody develops on.
+
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers what the code is trying to be, how to add a role rule or a parser fixture, and where help is wanted. Vulnerabilities go to [SECURITY.md](SECURITY.md) rather than to an issue, and the changes in each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

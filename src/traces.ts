@@ -70,7 +70,7 @@ export interface TraceEnv {
 
 /** What a rule read out of one entry name. */
 export interface TraceNames {
-  /** The encoded project path, e.g. `D--work-ds-social-media`. */
+  /** The encoded project path, e.g. `D--work-projects-shop-web`. */
   readonly slug: string;
   /** Whatever identifies the single run, printed for the human. */
   readonly session: string | null;
@@ -177,9 +177,9 @@ export function rulesForProcess(name: string, rules: readonly TraceRule[] = TRAC
  * The encoding these directory names use: every character that is not a
  * letter or a digit becomes a dash.
  *
- * It is lossy in one direction only. `D:\work\ds\dimhold.by` and
- * `D:\work\ds\dimhold-by` and `D:\work\ds\dimhold\by` all encode to
- * `D--work-ds-dimhold-by`, so a name can never be decoded by string surgery
+ * It is lossy in one direction only. `D:\work\projects\example.dev` and
+ * `D:\work\projects\example-dev` and `D:\work\projects\example\dev` all encode to
+ * `D--work-projects-example-dev`, so a name can never be decoded by string surgery
  * alone. It is decoded by looking at what is actually on the disk.
  */
 export function encodePathSegment(name: string): string {
